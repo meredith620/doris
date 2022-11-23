@@ -117,4 +117,8 @@ public class FeNameFormat {
     public static String getColumnNameRegex() {
         return COLUMN_NAME_REGEX;
     }
+
+    public static String getTableNameRegex() {
+        return COMMON_TABLE_NAME_REGEX;
+    }
 }
