@@ -44,10 +44,10 @@ suite("test_unicode_name") {
 
         qt_select """SHOW CREATE TABLE `中文表名_1`"""
     } finally {
-        sql """ DROP DATABASE IF EXISTS 中文库名 """
-        sql """ DROP TABLE IF EXISTS 中文表名 """
+        sql """ DROP DATABASE IF EXISTS `中文库名` """
+        sql """ DROP TABLE IF EXISTS `中文表名` """
 
-        sql """ DROP TABLE IF EXISTS 中文表名_1 """
+        sql """ DROP TABLE IF EXISTS `中文表名_1` """
     }
 
 }
