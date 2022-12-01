@@ -17,6 +17,9 @@
 
 suite("test_unicode_name") {
     try {
+    sql """
+    set enable_unicode_name_support = true
+    """
         sql """
     CREATE DATABASE IF NOT EXISTS `中文库名`
     """
