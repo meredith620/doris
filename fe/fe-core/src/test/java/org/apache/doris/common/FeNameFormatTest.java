@@ -23,6 +23,9 @@ public class FeNameFormatTest {
 
     @Test
     public void testCheckColumnName() {
+        // check label use correct regex, begin with '-' is different from others
+        ExceptionChecker.expectThrowsNoException(() -> FeNameFormat.checkLabel("-lable"));
+
         ExceptionChecker.expectThrowsNoException(() -> FeNameFormat.checkColumnName("_id"));
         ExceptionChecker.expectThrowsNoException(() -> FeNameFormat.checkColumnName("__id"));
         ExceptionChecker.expectThrowsNoException(() -> FeNameFormat.checkColumnName("___id"));
@@ -35,6 +38,12 @@ public class FeNameFormatTest {
         // length 64
         String tblName = "test_sys_partition_list_basic_test_list_partition_bigint_tb_uniq";
         ExceptionChecker.expectThrowsNoException(() -> FeNameFormat.checkTableName(tblName));
+        // check table name use correct regex, not begin with '-'
+        ExceptionChecker.expectThrows(AnalysisException.class, () -> FeNameFormat.checkTableName("-" + tblName));
+
+        // check common name use correct regex, length 65
+        ExceptionChecker.expectThrows(AnalysisException.class, () -> FeNameFormat.checkCommonName("fakeType", tblName + "t"));
+        ExceptionChecker.expectThrows(AnalysisException.class, () -> FeNameFormat.checkCommonName("fakeType", "_commonName"));
     }
 
 }
