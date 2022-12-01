@@ -20,6 +20,7 @@ package org.apache.doris.common;
 import org.apache.doris.alter.SchemaChangeHandler;
 import org.apache.doris.datasource.InternalCatalog;
 import org.apache.doris.mysql.privilege.PaloRole;
+import org.apache.doris.qe.ConnectContext;
 
 import com.google.common.base.Strings;
 
@@ -120,18 +121,34 @@ public class FeNameFormat {
     }
 
     public static String getColumnNameRegex() {
-        return COLUMN_NAME_REGEX;
+        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+            return UNICODE_COLUMN_NAME_REGEX;
+        } else {
+            return COLUMN_NAME_REGEX;
+        }
     }
 
     public static String getTableNameRegex() {
-        return TABLE_NAME_REGEX;
+        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+            return UNICODE_TABLE_NAME_REGEX;
+        } else {
+            return TABLE_NAME_REGEX;
+        }
     }
 
     public static String getLabelRegex() {
-        return LABEL_REGEX;
+        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+            return UNICODE_LABEL_REGEX;
+        } else {
+            return LABEL_REGEX;
+        }
     }
 
     public static String getCommonNameRegex() {
-        return COMMON_NAME_REGEX;
+        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+            return UNICODE_COMMON_NAME_REGEX;
+        } else {
+            return COMMON_NAME_REGEX;
+        }
     }
 }
