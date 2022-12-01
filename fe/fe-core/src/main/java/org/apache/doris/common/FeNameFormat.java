@@ -23,6 +23,7 @@ import org.apache.doris.mysql.privilege.PaloRole;
 import org.apache.doris.qe.ConnectContext;
 
 import com.google.common.base.Strings;
+import org.apache.doris.qe.VariableMgr;
 
 public class FeNameFormat {
     private static final String LABEL_REGEX = "^[-_A-Za-z0-9]{1,128}$";
@@ -120,8 +121,18 @@ public class FeNameFormat {
         }
     }
 
+    private static boolean isEnableUnicodeNameSupport() {
+        boolean isEnable;
+        if (ConnectContext.get() != null) {
+            isEnable = ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport();
+        } else {
+            isEnable = VariableMgr.getDefaultSessionVariable().isEnableUnicodeNameSupport();
+        }
+        return isEnable;
+    }
+
     public static String getColumnNameRegex() {
-        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+        if (FeNameFormat.isEnableUnicodeNameSupport()) {
             return UNICODE_COLUMN_NAME_REGEX;
         } else {
             return COLUMN_NAME_REGEX;
@@ -129,7 +140,7 @@ public class FeNameFormat {
     }
 
     public static String getTableNameRegex() {
-        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+        if (FeNameFormat.isEnableUnicodeNameSupport()) {
             return UNICODE_TABLE_NAME_REGEX;
         } else {
             return TABLE_NAME_REGEX;
@@ -137,7 +148,7 @@ public class FeNameFormat {
     }
 
     public static String getLabelRegex() {
-        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+        if (FeNameFormat.isEnableUnicodeNameSupport()) {
             return UNICODE_LABEL_REGEX;
         } else {
             return LABEL_REGEX;
@@ -145,7 +156,7 @@ public class FeNameFormat {
     }
 
     public static String getCommonNameRegex() {
-        if (ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport()) {
+        if (FeNameFormat.isEnableUnicodeNameSupport()) {
             return UNICODE_COMMON_NAME_REGEX;
         } else {
             return COMMON_NAME_REGEX;
