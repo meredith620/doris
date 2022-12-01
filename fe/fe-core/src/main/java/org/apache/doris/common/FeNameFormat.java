@@ -125,7 +125,7 @@ public class FeNameFormat {
         boolean isEnable;
         if (ConnectContext.get() != null) {
             isEnable = ConnectContext.get().getSessionVariable().isEnableUnicodeNameSupport();
-        } else {
+        } else { // for unittest to use default variable
             isEnable = VariableMgr.getDefaultSessionVariable().isEnableUnicodeNameSupport();
         }
         return isEnable;
