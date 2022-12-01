@@ -21,9 +21,9 @@ import org.apache.doris.alter.SchemaChangeHandler;
 import org.apache.doris.datasource.InternalCatalog;
 import org.apache.doris.mysql.privilege.PaloRole;
 import org.apache.doris.qe.ConnectContext;
+import org.apache.doris.qe.VariableMgr;
 
 import com.google.common.base.Strings;
-import org.apache.doris.qe.VariableMgr;
 
 public class FeNameFormat {
     private static final String LABEL_REGEX = "^[-_A-Za-z0-9]{1,128}$";
