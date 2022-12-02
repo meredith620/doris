@@ -26,6 +26,8 @@ under the License.
 
 # Java UDF
 
+<version since="1.2">
+
 Java UDF 为用户提供UDF编写的Java接口，以方便用户使用Java语言进行自定义函数的执行。相比于 Native 的 UDF 实现，Java UDF 有如下优势和限制：
 1. 优势
 * 兼容性：使用Java UDF可以兼容不同的Doris版本，所以在进行Doris版本升级时，Java UDF不需要进行额外的迁移操作。与此同时，Java UDF同样遵循了和Hive/Spark等引擎同样的编程规范，使得用户可以直接将Hive/Spark的UDF jar包迁移至Doris使用。
@@ -35,6 +37,8 @@ Java UDF 为用户提供UDF编写的Java接口，以方便用户使用Java语言
 2. 使用限制
 * 性能：相比于 Native UDF，Java UDF会带来额外的JNI开销，不过通过批式执行的方式，我们已经尽可能的将JNI开销降到最低。
 * 向量化引擎：Java UDF当前只支持向量化引擎。
+
+</version>
 
 ### 类型对应关系
 
@@ -56,7 +60,7 @@ Java UDF 为用户提供UDF编写的Java接口，以方便用户使用Java语言
 
 ## 编写 UDF 函数
 
-本小节主要介绍如何开发一个 Java UDF。在 `samples/doris-demo/java-udf-demo/` 下提供了示例，可供参考，查看点击[这里](https://github.com/apache/incubator-doris/tree/master/samples/doris-demo/java-udf-demo)
+本小节主要介绍如何开发一个 Java UDF。在 `samples/doris-demo/java-udf-demo/` 下提供了示例，可供参考，查看点击[这里](https://github.com/apache/doris/tree/master/samples/doris-demo/java-udf-demo)
 
 使用Java代码编写UDF，UDF的主入口必须为 `evaluate` 函数。这一点与Hive等其他引擎保持一致。在本示例中，我们编写了 `AddOne` UDF来完成对整型输入进行加一的操作。
 值得一提的是，本例不只是Doris支持的Java UDF，同时还是Hive支持的UDF，也就是说，对于用户来讲，Hive UDF是可以直接迁移至Doris的。
@@ -162,6 +166,8 @@ CREATE AGGREGATE FUNCTION simple_sum(int) RETURNS int PROPERTIES (
     "type"="JAVA_UDF"
 );
 ```
+* 实现的jar包可以放在本地也可以存放在远程服务端通过http下载，但必须让每个BE节点都能获取到jar包;
+否则将会返回错误状态信息"Couldn't open file ......".
 
 目前还暂不支持UDTF
 
@@ -178,7 +184,7 @@ UDF 的使用与普通的函数方式一致，唯一的区别在于，内置函�
 当你不再需要 UDF 函数时，你可以通过下述命令来删除一个 UDF 函数, 可以参考 `DROP FUNCTION`。
 
 ## 示例
-在`samples/doris-demo/java-udf-demo/` 目录中提供了具体示例。具体使用方法见每个目录下的`README.md`，查看点击[这里](https://github.com/apache/incubator-doris/tree/master/samples/doris-demo/java-udf-demo)
+在`samples/doris-demo/java-udf-demo/` 目录中提供了具体示例。具体使用方法见每个目录下的`README.md`，查看点击[这里](https://github.com/apache/doris/tree/master/samples/doris-demo/java-udf-demo)
 
 ## 使用须知
 1. 不支持复杂数据类型（HLL，Bitmap）。

@@ -38,6 +38,7 @@ import org.apache.doris.analysis.AlterMaterializedViewStmt;
 import org.apache.doris.analysis.AlterSystemStmt;
 import org.apache.doris.analysis.AlterTableStmt;
 import org.apache.doris.analysis.AlterViewStmt;
+import org.apache.doris.analysis.AnalyzeStmt;
 import org.apache.doris.analysis.BackupStmt;
 import org.apache.doris.analysis.CancelAlterSystemStmt;
 import org.apache.doris.analysis.CancelAlterTableStmt;
@@ -123,6 +124,7 @@ import org.apache.doris.consistency.ConsistencyChecker;
 import org.apache.doris.datasource.CatalogIf;
 import org.apache.doris.datasource.CatalogMgr;
 import org.apache.doris.datasource.EsExternalCatalog;
+import org.apache.doris.datasource.ExternalMetaCacheMgr;
 import org.apache.doris.datasource.InternalCatalog;
 import org.apache.doris.deploy.DeployManager;
 import org.apache.doris.deploy.impl.AmbariDeployManager;
@@ -206,11 +208,15 @@ import org.apache.doris.qe.JournalObservable;
 import org.apache.doris.qe.VariableMgr;
 import org.apache.doris.resource.Tag;
 import org.apache.doris.service.FrontendOptions;
+import org.apache.doris.statistics.AnalysisManager;
+import org.apache.doris.statistics.AnalysisTaskScheduler;
+import org.apache.doris.statistics.StatisticsCache;
 import org.apache.doris.statistics.StatisticsJobManager;
 import org.apache.doris.statistics.StatisticsJobScheduler;
 import org.apache.doris.statistics.StatisticsManager;
 import org.apache.doris.statistics.StatisticsTaskScheduler;
 import org.apache.doris.system.Backend;
+import org.apache.doris.system.FQDNManager;
 import org.apache.doris.system.Frontend;
 import org.apache.doris.system.HeartbeatMgr;
 import org.apache.doris.system.SystemInfoService;
@@ -435,6 +441,12 @@ public class Env {
 
     private MTMVJobManager mtmvJobManager;
 
+    private AnalysisManager analysisManager;
+
+    private ExternalMetaCacheMgr extMetaCacheMgr;
+
+    private FQDNManager fqdnManager;
+
     public List<Frontend> getFrontends(FrontendNodeType nodeType) {
         if (nodeType == null) {
             // get all
@@ -498,6 +510,10 @@ public class Env {
 
     public MTMVJobManager getMTMVJobManager() {
         return mtmvJobManager;
+    }
+
+    public ExternalMetaCacheMgr getExtMetaCacheMgr() {
+        return extMetaCacheMgr;
     }
 
     public CatalogIf getCurrentCatalog() {
@@ -629,6 +645,9 @@ public class Env {
         this.refreshManager = new RefreshManager();
         this.policyMgr = new PolicyMgr();
         this.mtmvJobManager = new MTMVJobManager();
+        this.extMetaCacheMgr = new ExternalMetaCacheMgr();
+        this.fqdnManager = new FQDNManager(systemInfo);
+        this.analysisManager = new AnalysisManager();
     }
 
     public static void destroyCheckpoint() {
@@ -1412,6 +1431,10 @@ public class Env {
         getInternalCatalog().getIcebergTableCreationRecordMgr().start();
         this.statisticsJobScheduler.start();
         this.statisticsTaskScheduler.start();
+        new InternalSchemaInitializer().start();
+        if (Config.enable_fqdn_mode) {
+            fqdnManager.start();
+        }
     }
 
     // start threads that should running on all FE
@@ -1624,6 +1647,10 @@ public class Env {
                 connection.disconnect();
             }
         }
+    }
+
+    public StatisticsCache getStatisticsCache() {
+        return analysisManager.getStatisticsCache();
     }
 
     public boolean hasReplayer() {
@@ -2948,12 +2975,6 @@ public class Env {
             sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_STORAGE_FORMAT).append("\" = \"");
             sb.append(olapTable.getStorageFormat()).append("\"");
 
-            // remote storage
-            String remoteStoragePolicy = olapTable.getRemoteStoragePolicy();
-            if (!Strings.isNullOrEmpty(remoteStoragePolicy)) {
-                sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_REMOTE_STORAGE_POLICY).append("\" = \"");
-                sb.append(remoteStoragePolicy).append("\"");
-            }
             // compression type
             if (olapTable.getCompressionType() != TCompressionType.LZ4F) {
                 sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_COMPRESSION).append("\" = \"");
@@ -2980,9 +3001,15 @@ public class Env {
 
             // sequence type
             if (olapTable.hasSequenceCol()) {
-                sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_FUNCTION_COLUMN + "."
-                        + PropertyAnalyzer.PROPERTIES_SEQUENCE_TYPE).append("\" = \"");
-                sb.append(olapTable.getSequenceType().toString()).append("\"");
+                if (olapTable.getSequenceMapCol() != null) {
+                    sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_FUNCTION_COLUMN + "."
+                            + PropertyAnalyzer.PROPERTIES_SEQUENCE_COL).append("\" = \"");
+                    sb.append(olapTable.getSequenceMapCol()).append("\"");
+                } else {
+                    sb.append(",\n\"").append(PropertyAnalyzer.PROPERTIES_FUNCTION_COLUMN + "."
+                            + PropertyAnalyzer.PROPERTIES_SEQUENCE_TYPE).append("\" = \"");
+                    sb.append(olapTable.getSequenceType().toString()).append("\"");
+                }
             }
 
             // disable auto compaction
@@ -4125,6 +4152,11 @@ public class Env {
             }
         }
 
+        // 5. modify sequence map col
+        if (table.hasSequenceCol() && table.getSequenceMapCol().equalsIgnoreCase(colName)) {
+            table.setSequenceMapCol(newColName);
+        }
+
         table.rebuildFullSchema();
 
         if (!isReplay) {
@@ -4740,7 +4772,7 @@ public class Env {
     public void createFunction(CreateFunctionStmt stmt) throws UserException {
         FunctionName name = stmt.getFunctionName();
         Database db = getInternalCatalog().getDbOrDdlException(name.getDb());
-        db.addFunction(stmt.getFunction());
+        db.addFunction(stmt.getFunction(), stmt.isIfNotExists());
     }
 
     public void replayCreateFunction(Function function) throws MetaNotFoundException {
@@ -4752,7 +4784,7 @@ public class Env {
     public void dropFunction(DropFunctionStmt stmt) throws UserException {
         FunctionName name = stmt.getFunctionName();
         Database db = getInternalCatalog().getDbOrDdlException(name.getDb());
-        db.dropFunction(stmt.getFunction());
+        db.dropFunction(stmt.getFunction(), stmt.isIfExists());
     }
 
     public void replayDropFunction(FunctionSearchDesc functionSearchDesc) throws MetaNotFoundException {
@@ -5197,4 +5229,21 @@ public class Env {
         }
         return count;
     }
+
+    public AnalysisTaskScheduler getAnalysisJobScheduler() {
+        return analysisManager.taskScheduler;
+    }
+
+    // TODO:
+    //  1. handle partition level analysis statement properly
+    //  2. support sample job
+    //  3. support period job
+    public void createAnalysisJob(AnalyzeStmt analyzeStmt) {
+        analysisManager.createAnalysisJob(analyzeStmt);
+    }
+
+    public AnalysisManager getAnalysisManager() {
+        return analysisManager;
+    }
+
 }
