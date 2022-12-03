@@ -18,6 +18,7 @@
 package org.apache.doris.nereids;
 
 import org.apache.doris.common.Id;
+import org.apache.doris.nereids.memo.Group;
 import org.apache.doris.nereids.memo.GroupExpression;
 import org.apache.doris.nereids.properties.LogicalProperties;
 import org.apache.doris.nereids.trees.expressions.Slot;
@@ -25,6 +26,7 @@ import org.apache.doris.nereids.trees.plans.Plan;
 import org.apache.doris.statistics.StatsDeriveResult;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 import java.util.List;
 
@@ -35,6 +37,8 @@ import java.util.List;
  * Inspired by GPORCA-CExpressionHandle.
  */
 public class PlanContext {
+    // array of children's derived stats
+    private final List<StatsDeriveResult> childrenStats;
     // attached group expression
     private final GroupExpression groupExpression;
 
@@ -43,10 +47,19 @@ public class PlanContext {
      */
     public PlanContext(GroupExpression groupExpression) {
         this.groupExpression = groupExpression;
+        childrenStats = Lists.newArrayListWithCapacity(groupExpression.children().size());
+
+        for (Group group : groupExpression.children()) {
+            childrenStats.add(group.getStatistics());
+        }
     }
 
     public GroupExpression getGroupExpression() {
         return groupExpression;
+    }
+
+    public List<StatsDeriveResult> getChildrenStats() {
+        return childrenStats;
     }
 
     public StatsDeriveResult getStatisticsWithCheck() {
@@ -71,7 +84,7 @@ public class PlanContext {
      * Get child statistics.
      */
     public StatsDeriveResult getChildStatistics(int index) {
-        StatsDeriveResult statistics = groupExpression.child(index).getStatistics();
+        StatsDeriveResult statistics = childrenStats.get(index);
         Preconditions.checkNotNull(statistics);
         return statistics;
     }

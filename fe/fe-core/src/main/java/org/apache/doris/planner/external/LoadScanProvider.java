@@ -24,7 +24,6 @@ import org.apache.doris.analysis.IntLiteral;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.catalog.Column;
-import org.apache.doris.catalog.OlapTable;
 import org.apache.doris.catalog.TableIf;
 import org.apache.doris.common.DdlException;
 import org.apache.doris.common.FeConstants;
@@ -192,14 +191,9 @@ public class LoadScanProvider implements FileScanProviderIf {
             columnDescs.descs.add(ImportColumnDesc.newDeleteSignImportColumnDesc(new IntLiteral(1)));
         }
         // add columnExpr for sequence column
-        TableIf targetTable = getTargetTable();
-        if (targetTable instanceof OlapTable && ((OlapTable) targetTable).hasSequenceCol()) {
-            String sequenceCol = ((OlapTable) targetTable).getSequenceMapCol();
-            if (sequenceCol == null) {
-                sequenceCol = context.fileGroup.getSequenceCol();
-            }
-            columnDescs.descs.add(new ImportColumnDesc(Column.SEQUENCE_COL,
-                    new SlotRef(null, sequenceCol)));
+        if (context.fileGroup.hasSequenceCol()) {
+            columnDescs.descs.add(
+                    new ImportColumnDesc(Column.SEQUENCE_COL, new SlotRef(null, context.fileGroup.getSequenceCol())));
         }
         List<Integer> srcSlotIds = Lists.newArrayList();
         Load.initColumns(fileGroupInfo.getTargetTable(), columnDescs, context.fileGroup.getColumnToHadoopFunction(),

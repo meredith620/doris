@@ -37,10 +37,8 @@ This statement is used to undo an import job for the specified label. Or batch u
 ```sql
 CANCEL LOAD
 [FROM db_name]
-WHERE [LABEL = "load_label" | LABEL like "label_pattern" | STATE = "PENDING/ETL/LOADING"]
-```
-
-Notice: Cancel by State is supported since 1.2.0.
+WHERE [LABEL = "load_label" | LABEL like "label_pattern"];
+````
 
 ### Example
 
@@ -59,18 +57,6 @@ Notice: Cancel by State is supported since 1.2.0.
     FROM example_db
     WHERE LABEL like "example_";
     ````
-
-<version since="1.2.0">
-
-3. Cancel all import jobs which state are "LOADING"
-
-   ```sql
-   CANCEL LOAD
-   FROM example_db
-   WHERE STATE = "loading";
-   ```
-
-</version>
 
 ### Keywords
 

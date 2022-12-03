@@ -28,7 +28,7 @@ under the License.
 ### Description
 #### Syntax
 
-`VARCHAR RIGHT (VARCHAR str, INT len)`
+`VARCHAR RIGHT (VARCHAR STR)`
 
 
 It returns the right part of a string of specified length, length is char length not the byte size.

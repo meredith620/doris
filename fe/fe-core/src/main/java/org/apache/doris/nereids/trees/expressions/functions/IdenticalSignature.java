@@ -18,11 +18,7 @@
 package org.apache.doris.nereids.trees.expressions.functions;
 
 import org.apache.doris.catalog.FunctionSignature;
-import org.apache.doris.nereids.trees.expressions.Expression;
-import org.apache.doris.nereids.types.DataType;
 import org.apache.doris.nereids.types.coercion.AbstractDataType;
-
-import java.util.List;
 
 /**
  * Identical function signature. This class equals to 'CompareMode.IS_IDENTICAL'.
@@ -37,9 +33,8 @@ public interface IdenticalSignature extends ComputeSignature {
     }
 
     @Override
-    default FunctionSignature searchSignature(List<DataType> argumentTypes, List<Expression> arguments,
-            List<FunctionSignature> signatures) {
-        return SearchSignature.from(signatures, arguments)
+    default FunctionSignature searchSignature() {
+        return SearchSignature.from(getSignatures(), getArguments())
                 // first round, use identical strategy to find signature
                 .orElseSearch(IdenticalSignature::isIdentical)
                 .resultOrException(getName());

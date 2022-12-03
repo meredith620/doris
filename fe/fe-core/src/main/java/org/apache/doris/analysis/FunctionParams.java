@@ -119,7 +119,7 @@ public class FunctionParams implements Writable {
         }
     }
 
-    private void readFields(DataInput in) throws IOException {
+    public void readFields(DataInput in) throws IOException {
         isStar = in.readBoolean();
         isDistinct = in.readBoolean();
         if (in.readBoolean()) {

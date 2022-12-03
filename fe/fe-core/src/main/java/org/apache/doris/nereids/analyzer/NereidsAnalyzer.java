@@ -21,6 +21,7 @@ import org.apache.doris.nereids.CascadesContext;
 import org.apache.doris.nereids.jobs.batch.AnalyzeRulesJob;
 import org.apache.doris.nereids.jobs.batch.AnalyzeSubqueryRulesJob;
 import org.apache.doris.nereids.jobs.batch.CheckAnalysisJob;
+import org.apache.doris.nereids.jobs.batch.FinalizeAnalyzeJob;
 import org.apache.doris.nereids.jobs.batch.TypeCoercionJob;
 import org.apache.doris.nereids.rules.analysis.Scope;
 
@@ -51,7 +52,17 @@ public class NereidsAnalyzer {
         new AnalyzeRulesJob(cascadesContext, outerScope).execute();
         new AnalyzeSubqueryRulesJob(cascadesContext).execute();
         new TypeCoercionJob(cascadesContext).execute();
+        new FinalizeAnalyzeJob(cascadesContext).execute();
         // check whether analyze result is meaningful
         new CheckAnalysisJob(cascadesContext).execute();
     }
+
+    public CascadesContext getCascadesContext() {
+        return cascadesContext;
+    }
+
+    public Optional<Scope> getOuterScope() {
+        return outerScope;
+    }
+
 }

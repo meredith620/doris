@@ -17,6 +17,7 @@
 
 #pragma once
 
+#ifdef LIBJVM
 #include <jni.h>
 
 #include "common/status.h"
@@ -154,3 +155,5 @@ Status SerializeThriftMsg(JNIEnv* env, T* msg, jbyteArray* serialized_msg) {
 }
 
 } // namespace doris
+
+#endif

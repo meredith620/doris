@@ -113,7 +113,7 @@ if (WITH_MYSQL)
         )
 endif()
 
-if (USE_JEMALLOC AND USE_MEM_TRACKER)
+if (USE_JEMALLOC)
     set(RUNTIME_FILES ${RUNTIME_FILES}
         memory/jemalloc_hook.cpp
         )

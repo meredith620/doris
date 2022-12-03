@@ -520,7 +520,7 @@ public class MaterializedViewHandler extends AlterHandler {
                 nextColUniqueId++;
             }
         } else {
-            newMVColumns.forEach(column -> {
+            newMVColumns.stream().forEach(column -> {
                 column.setUniqueId(Column.COLUMN_UNIQUE_ID_INIT_VALUE);
             });
         }
@@ -722,7 +722,7 @@ public class MaterializedViewHandler extends AlterHandler {
                 nextColUniqueId++;
             }
         } else {
-            rollupSchema.forEach(column -> {
+            rollupSchema.stream().forEach(column -> {
                 column.setUniqueId(Column.COLUMN_UNIQUE_ID_INIT_VALUE);
             });
         }

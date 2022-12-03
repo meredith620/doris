@@ -42,10 +42,6 @@ class IOBufAsZeroCopyInputStream;
 
 namespace doris {
 
-namespace pipeline {
-class PipelineFragmentContext;
-}
-
 class QueryFragmentsCtx;
 class ExecEnv;
 class FragmentExecState;
@@ -70,22 +66,17 @@ public:
     // execute one plan fragment
     Status exec_plan_fragment(const TExecPlanFragmentParams& params);
 
-    Status exec_pipeline(const TExecPlanFragmentParams& params);
-
-    void remove_pipeline_context(
-            std::shared_ptr<pipeline::PipelineFragmentContext> pipeline_context);
-
     // TODO(zc): report this is over
     Status exec_plan_fragment(const TExecPlanFragmentParams& params, FinishCallback cb);
 
     Status start_query_execution(const PExecPlanFragmentStartRequest* request);
 
-    void cancel(const TUniqueId& fragment_id) {
-        cancel(fragment_id, PPlanFragmentCancelReason::INTERNAL_ERROR);
+    Status cancel(const TUniqueId& fragment_id) {
+        return cancel(fragment_id, PPlanFragmentCancelReason::INTERNAL_ERROR);
     }
 
-    void cancel(const TUniqueId& fragment_id, const PPlanFragmentCancelReason& reason,
-                const std::string& msg = "");
+    Status cancel(const TUniqueId& fragment_id, const PPlanFragmentCancelReason& reason,
+                  const std::string& msg = "");
 
     void cancel_worker();
 
@@ -116,6 +107,10 @@ private:
 
     bool _is_scan_node(const TPlanNodeType::type& type);
 
+    void _setup_shared_hashtable_for_broadcast_join(const TExecPlanFragmentParams& params,
+                                                    RuntimeState* state,
+                                                    QueryFragmentsCtx* fragments_ctx);
+
     // This is input params
     ExecEnv* _exec_env;
 
@@ -128,9 +123,6 @@ private:
 
     // Make sure that remove this before no data reference FragmentExecState
     std::unordered_map<TUniqueId, std::shared_ptr<FragmentExecState>> _fragment_map;
-
-    std::unordered_map<TUniqueId, std::shared_ptr<pipeline::PipelineFragmentContext>> _pipeline_map;
-
     // query id -> QueryFragmentsCtx
     std::unordered_map<TUniqueId, std::shared_ptr<QueryFragmentsCtx>> _fragments_ctx_map;
     std::unordered_map<TUniqueId, std::unordered_map<int, int64_t>> _bf_size_map;

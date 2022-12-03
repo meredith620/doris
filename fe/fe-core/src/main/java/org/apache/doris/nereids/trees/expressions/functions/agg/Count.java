@@ -17,23 +17,20 @@
 
 package org.apache.doris.nereids.trees.expressions.functions.agg;
 
-import org.apache.doris.catalog.FunctionSignature;
 import org.apache.doris.nereids.exceptions.UnboundException;
 import org.apache.doris.nereids.trees.expressions.Expression;
 import org.apache.doris.nereids.trees.expressions.functions.AlwaysNotNullable;
-import org.apache.doris.nereids.trees.expressions.functions.CustomSignature;
 import org.apache.doris.nereids.trees.expressions.visitor.ExpressionVisitor;
 import org.apache.doris.nereids.types.BigIntType;
 import org.apache.doris.nereids.types.DataType;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 /** count agg function. */
-public class Count extends AggregateFunction implements AlwaysNotNullable, CustomSignature {
+public class Count extends AggregateFunction implements AlwaysNotNullable {
 
     private final boolean isStar;
 
@@ -62,13 +59,13 @@ public class Count extends AggregateFunction implements AlwaysNotNullable, Custo
     }
 
     @Override
-    public FunctionSignature customSignature(List<DataType> argumentTypes, List<Expression> arguments) {
-        return FunctionSignature.of(BigIntType.INSTANCE, (List) argumentTypes);
+    public DataType getFinalType() {
+        return BigIntType.INSTANCE;
     }
 
     @Override
-    protected List<DataType> intermediateTypes(List<DataType> argumentTypes, List<Expression> arguments) {
-        return ImmutableList.of(BigIntType.INSTANCE);
+    public DataType getIntermediateType() {
+        return getFinalType();
     }
 
     @Override

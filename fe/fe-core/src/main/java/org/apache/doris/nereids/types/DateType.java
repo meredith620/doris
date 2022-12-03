@@ -18,12 +18,12 @@
 package org.apache.doris.nereids.types;
 
 import org.apache.doris.catalog.Type;
-import org.apache.doris.nereids.types.coercion.DateLikeType;
+import org.apache.doris.nereids.types.coercion.PrimitiveType;
 
 /**
  * Date type in Nereids.
  */
-public class DateType extends DateLikeType {
+public class DateType extends PrimitiveType {
 
     public static final DateType INSTANCE = new DateType();
 

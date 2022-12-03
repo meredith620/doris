@@ -38,7 +38,7 @@ import java.util.Objects;
  * All data type literal expression in Nereids.
  * TODO: Increase the implementation of sub expression. such as Integer.
  */
-public abstract class Literal extends Expression implements LeafExpression, Comparable<Literal> {
+public abstract class Literal extends Expression implements LeafExpression {
 
     private final DataType dataType;
 
@@ -129,7 +129,6 @@ public abstract class Literal extends Expression implements LeafExpression, Comp
     /**
      * literal expr compare.
      */
-    @Override
     public int compareTo(Literal other) {
         if (isNullLiteral() && other.isNullLiteral()) {
             return 0;

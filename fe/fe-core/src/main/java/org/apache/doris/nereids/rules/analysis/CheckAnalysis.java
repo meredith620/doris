@@ -35,17 +35,12 @@ import java.util.stream.Collectors;
  * Check analysis rule to check semantic correct after analysis by Nereids.
  */
 public class CheckAnalysis extends OneAnalysisRuleFactory {
-
     @Override
     public Rule build() {
-        return any().then(plan -> {
-            checkBound(plan);
-            checkExpressionInputTypes(plan);
-            return null;
-        }).toRule(RuleType.CHECK_ANALYSIS);
+        return any().then(plan -> checkExpressionInputTypes(checkBound(plan))).toRule(RuleType.CHECK_ANALYSIS);
     }
 
-    private void checkExpressionInputTypes(Plan plan) {
+    private Plan checkExpressionInputTypes(Plan plan) {
         final Optional<TypeCheckResult> firstFailed = plan.getExpressions().stream()
                 .map(Expression::checkInputDataTypes)
                 .filter(TypeCheckResult::failed)
@@ -54,9 +49,10 @@ public class CheckAnalysis extends OneAnalysisRuleFactory {
         if (firstFailed.isPresent()) {
             throw new AnalysisException(firstFailed.get().getMessage());
         }
+        return plan;
     }
 
-    private void checkBound(Plan plan) {
+    private Plan checkBound(Plan plan) {
         Set<UnboundSlot> unboundSlots = plan.getExpressions().stream()
                 .<Set<UnboundSlot>>map(e -> e.collect(UnboundSlot.class::isInstance))
                 .flatMap(Set::stream)
@@ -67,5 +63,6 @@ public class CheckAnalysis extends OneAnalysisRuleFactory {
                             .map(UnboundSlot::toSql)
                             .collect(Collectors.toSet()), ", ")));
         }
+        return plan;
     }
 }

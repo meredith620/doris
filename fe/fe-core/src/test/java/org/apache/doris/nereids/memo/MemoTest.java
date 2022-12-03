@@ -123,12 +123,11 @@ class MemoTest implements PatternMatchSupported {
                 .transform(
                         // swap join's children
                         logicalJoin(logicalOlapScan(), logicalOlapScan()).then(joinBA ->
-                                // this project eliminate when copy in, because it's output same with child.
                                 new LogicalProject<>(Lists.newArrayList(joinBA.getOutput()),
                                         new LogicalJoin<>(JoinType.INNER_JOIN, joinBA.right(), joinBA.left()))
                         ))
-                .checkGroupNum(5)
-                .checkGroupExpressionNum(6)
+                .checkGroupNum(6)
+                .checkGroupExpressionNum(7)
                 .checkMemo(memo -> {
                     Group root = memo.getRoot();
                     Assertions.assertEquals(1, root.getLogicalExpressions().size());
@@ -136,7 +135,8 @@ class MemoTest implements PatternMatchSupported {
                     Assertions.assertEquals(2, joinABC.child(0).getLogicalExpressions().size());
                     Assertions.assertEquals(1, joinABC.child(1).getLogicalExpressions().size());
                     GroupExpression joinAB = joinABC.child(0).getLogicalExpressions().get(0);
-                    GroupExpression joinBA = joinABC.child(0).getLogicalExpressions().get(1);
+                    GroupExpression project = joinABC.child(0).getLogicalExpressions().get(1);
+                    GroupExpression joinBA = project.child(0).getLogicalExpression();
                     Assertions.assertTrue(joinAB.getPlan() instanceof LogicalJoin);
                     Assertions.assertTrue(joinBA.getPlan() instanceof LogicalJoin);
                 });

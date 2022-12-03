@@ -17,10 +17,7 @@
 
 package org.apache.doris.nereids.trees.expressions.functions.agg;
 
-import org.apache.doris.catalog.FunctionSignature;
 import org.apache.doris.nereids.trees.expressions.Expression;
-import org.apache.doris.nereids.trees.expressions.functions.CustomSignature;
-import org.apache.doris.nereids.trees.expressions.functions.PropagateNullable;
 import org.apache.doris.nereids.trees.expressions.shape.UnaryExpression;
 import org.apache.doris.nereids.trees.expressions.visitor.ExpressionVisitor;
 import org.apache.doris.nereids.types.DataType;
@@ -30,7 +27,8 @@ import com.google.common.base.Preconditions;
 import java.util.List;
 
 /** max agg function. */
-public class Max extends AggregateFunction implements UnaryExpression, PropagateNullable, CustomSignature {
+public class Max extends AggregateFunction implements UnaryExpression {
+
     public Max(Expression child) {
         super("max", child);
     }
@@ -40,13 +38,18 @@ public class Max extends AggregateFunction implements UnaryExpression, Propagate
     }
 
     @Override
-    public FunctionSignature customSignature(List<DataType> argumentTypes, List<Expression> arguments) {
-        return FunctionSignature.ret(argumentTypes.get(0)).args(argumentTypes.get(0));
+    public DataType getFinalType() {
+        return child().getDataType();
     }
 
     @Override
-    protected List<DataType> intermediateTypes(List<DataType> argumentTypes, List<Expression> arguments) {
-        return argumentTypes;
+    public DataType getIntermediateType() {
+        return getFinalType();
+    }
+
+    @Override
+    public boolean nullable() {
+        return child().nullable();
     }
 
     @Override

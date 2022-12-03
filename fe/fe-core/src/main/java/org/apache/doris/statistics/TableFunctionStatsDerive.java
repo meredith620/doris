@@ -23,6 +23,10 @@ import com.google.common.base.Preconditions;
  * Derive TableFunctionNode statistics.
  */
 public class TableFunctionStatsDerive extends BaseStatsDerive {
+    @Override
+    public StatsDeriveResult deriveStats() {
+        return new StatsDeriveResult(deriveRowCount(), deriveColumnToDataSize(), deriveColumnToNdv());
+    }
 
     @Override
     protected long deriveRowCount() {

@@ -34,13 +34,6 @@ class TPlanNode;
 class DescriptorTbl;
 class MemPool;
 
-namespace pipeline {
-class AggSinkOperator;
-class AggregationSourceOperator;
-class StreamingAggSinkOperator;
-class StreamingAggSourceOperator;
-} // namespace pipeline
-
 namespace vectorized {
 class VExprContext;
 
@@ -70,44 +63,29 @@ struct AggregationMethodSerialized {
     template <typename Other>
     explicit AggregationMethodSerialized(const Other& other) : data(other.data) {}
 
-    size_t serialize_keys(const ColumnRawPtrs& key_columns, size_t num_rows) {
-        if (keys.size() < num_rows) {
-            keys.resize(num_rows);
-        }
-
+    void serialize_keys(const ColumnRawPtrs& key_columns, const size_t num_rows) {
         size_t max_one_row_byte_size = 0;
         for (const auto& column : key_columns) {
             max_one_row_byte_size += column->get_max_row_byte_size();
         }
-        size_t total_bytes = max_one_row_byte_size * num_rows;
 
-        if (total_bytes > SERIALIZE_KEYS_MEM_LIMIT_IN_BYTES) {
-            // reach mem limit, don't serialize in batch
-            // for simplicity, we just create a new arena here.
-            _arena.reset(new Arena());
-            size_t keys_size = key_columns.size();
-            for (size_t i = 0; i < num_rows; ++i) {
-                keys[i] = serialize_keys_to_pool_contiguous(i, keys_size, key_columns, *_arena);
-            }
-        } else {
-            _arena.reset();
-            if (total_bytes > _serialized_key_buffer_size) {
-                _serialized_key_buffer_size = total_bytes;
-                _mem_pool->clear();
-                _serialized_key_buffer = _mem_pool->allocate(_serialized_key_buffer_size, true);
-            }
-
-            for (size_t i = 0; i < num_rows; ++i) {
-                keys[i].data =
-                        reinterpret_cast<char*>(_serialized_key_buffer + i * max_one_row_byte_size);
-                keys[i].size = 0;
-            }
-
-            for (const auto& column : key_columns) {
-                column->serialize_vec(keys, num_rows, max_one_row_byte_size);
-            }
+        if ((max_one_row_byte_size * num_rows) > _serialized_key_buffer_size) {
+            _serialized_key_buffer_size = max_one_row_byte_size * num_rows;
+            _mem_pool->clear();
+            _serialized_key_buffer = _mem_pool->allocate(_serialized_key_buffer_size);
         }
-        return max_one_row_byte_size;
+
+        if (keys.size() < num_rows) keys.resize(num_rows);
+
+        for (size_t i = 0; i < num_rows; ++i) {
+            keys[i].data =
+                    reinterpret_cast<char*>(_serialized_key_buffer + i * max_one_row_byte_size);
+            keys[i].size = 0;
+        }
+
+        for (const auto& column : key_columns) {
+            column->serialize_vec(keys, num_rows, max_one_row_byte_size);
+        }
     }
 
     static void insert_key_into_columns(const StringRef& key, MutableColumns& key_columns,
@@ -132,8 +110,6 @@ private:
     size_t _serialized_key_buffer_size;
     uint8_t* _serialized_key_buffer;
     std::unique_ptr<MemPool> _mem_pool;
-    std::unique_ptr<Arena> _arena;
-    static constexpr size_t SERIALIZE_KEYS_MEM_LIMIT_IN_BYTES = 16 * 1024 * 1024; // 16M
 };
 
 using AggregatedDataWithoutKey = AggregateDataPtr;
@@ -638,8 +614,7 @@ struct AggregatedDataVariants {
     }
 };
 
-using AggregatedDataVariantsUPtr = std::unique_ptr<AggregatedDataVariants>;
-using ArenaUPtr = std::unique_ptr<Arena>;
+using AggregatedDataVariantsPtr = std::shared_ptr<AggregatedDataVariants>;
 
 struct AggregateDataContainer {
 public:
@@ -761,31 +736,20 @@ private:
 };
 
 // not support spill
-class AggregationNode final : public ::doris::ExecNode {
+class AggregationNode : public ::doris::ExecNode {
 public:
     using Sizes = std::vector<size_t>;
 
     AggregationNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
     ~AggregationNode();
-    virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr) override;
-    Status prepare_profile(RuntimeState* state);
-    virtual Status prepare(RuntimeState* state) override;
-    virtual Status open(RuntimeState* state) override;
-    virtual Status alloc_resource(RuntimeState* state) override;
-    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) override;
-    virtual Status get_next(RuntimeState* state, Block* block, bool* eos) override;
-    virtual Status close(RuntimeState* state) override;
-    virtual void release_resource(RuntimeState* state) override;
-    Status pull(doris::RuntimeState* state, vectorized::Block* output_block, bool* eos) override;
-    Status sink(doris::RuntimeState* state, vectorized::Block* input_block, bool eos) override;
-    Status do_pre_agg(vectorized::Block* input_block, vectorized::Block* output_block);
-    bool is_streaming_preagg() { return _is_streaming_preagg; }
+    virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
+    virtual Status prepare(RuntimeState* state);
+    virtual Status open(RuntimeState* state);
+    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos);
+    virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
+    virtual Status close(RuntimeState* state);
 
 private:
-    friend class pipeline::AggSinkOperator;
-    friend class pipeline::StreamingAggSinkOperator;
-    friend class pipeline::AggregationSourceOperator;
-    friend class pipeline::StreamingAggSourceOperator;
     // group by k1,k2
     std::vector<VExprContext*> _probe_expr_ctxs;
     // left / full join will change the key nullable make output/input solt
@@ -808,15 +772,17 @@ private:
     bool _use_fixed_length_serialization_opt;
     std::unique_ptr<MemPool> _mem_pool;
 
+    std::unique_ptr<MemTracker> _data_mem_tracker;
+
     size_t _align_aggregate_states = 1;
     /// The offset to the n-th aggregate function in a row of aggregate functions.
     Sizes _offsets_of_aggregate_states;
     /// The total size of the row from the aggregate functions.
     size_t _total_size_of_aggregate_states = 0;
 
-    AggregatedDataVariantsUPtr _agg_data;
+    AggregatedDataVariants _agg_data;
 
-    ArenaUPtr _agg_arena_pool;
+    Arena _agg_arena_pool;
 
     RuntimeProfile::Counter* _build_timer;
     RuntimeProfile::Counter* _serialize_key_timer;
@@ -833,7 +799,6 @@ private:
     RuntimeProfile::Counter* _streaming_agg_timer;
     RuntimeProfile::Counter* _hash_table_size_counter;
     RuntimeProfile::Counter* _hash_table_input_counter;
-    RuntimeProfile::Counter* _max_row_size_counter;
 
     bool _is_streaming_preagg;
     Block _preagg_block = Block();
@@ -850,7 +815,6 @@ private:
     std::unique_ptr<AggregateDataContainer> _aggregate_data_container;
 
 private:
-    void _release_self_resource(RuntimeState* state);
     /// Return true if we should keep expanding hash tables in the preagg. If false,
     /// the preagg should pass through any rows it can't fit in its tables.
     bool _should_expand_preagg_hash_tables();
@@ -883,8 +847,7 @@ private:
                                     const ColumnRawPtrs& key_columns, const size_t num_rows) {
         if constexpr (ColumnsHashing::IsPreSerializedKeysHashMethodTraits<AggState>::value) {
             SCOPED_TIMER(_serialize_key_timer);
-            int64_t row_size = (int64_t)(agg_method.serialize_keys(key_columns, num_rows));
-            COUNTER_SET(_max_row_size_counter, std::max(_max_row_size_counter->value(), row_size));
+            agg_method.serialize_keys(key_columns, num_rows);
             state.set_serialized_keys(agg_method.keys.data());
         }
     }
@@ -918,15 +881,14 @@ private:
 
             for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
                 _aggregate_evaluators[i]->execute_batch_add_selected(
-                        block, _offsets_of_aggregate_states[i], _places.data(),
-                        _agg_arena_pool.get());
+                        block, _offsets_of_aggregate_states[i], _places.data(), &_agg_arena_pool);
             }
         } else {
             _emplace_into_hash_table(_places.data(), key_columns, rows);
 
             for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
                 _aggregate_evaluators[i]->execute_batch_add(block, _offsets_of_aggregate_states[i],
-                                                            _places.data(), _agg_arena_pool.get());
+                                                            _places.data(), &_agg_arena_pool);
             }
 
             if (_should_limit_output) {
@@ -986,16 +948,16 @@ private:
                     if (_use_fixed_length_serialization_opt) {
                         SCOPED_TIMER(_deserialize_data_timer);
                         _aggregate_evaluators[i]->function()->deserialize_from_column(
-                                _deserialize_buffer.data(), *column, _agg_arena_pool.get(), rows);
+                                _deserialize_buffer.data(), *column, &_agg_arena_pool, rows);
                     } else {
                         SCOPED_TIMER(_deserialize_data_timer);
                         _aggregate_evaluators[i]->function()->deserialize_vec(
                                 _deserialize_buffer.data(), (ColumnString*)(column.get()),
-                                _agg_arena_pool.get(), rows);
+                                &_agg_arena_pool, rows);
                     }
                     _aggregate_evaluators[i]->function()->merge_vec_selected(
                             _places.data(), _offsets_of_aggregate_states[i],
-                            _deserialize_buffer.data(), _agg_arena_pool.get(), rows);
+                            _deserialize_buffer.data(), &_agg_arena_pool, rows);
 
                     _aggregate_evaluators[i]->function()->destroy_vec(_deserialize_buffer.data(),
                                                                       rows);
@@ -1003,7 +965,7 @@ private:
                 } else {
                     _aggregate_evaluators[i]->execute_batch_add_selected(
                             block, _offsets_of_aggregate_states[i], _places.data(),
-                            _agg_arena_pool.get());
+                            &_agg_arena_pool);
                 }
             }
         } else {
@@ -1026,24 +988,24 @@ private:
                     if (_use_fixed_length_serialization_opt) {
                         SCOPED_TIMER(_deserialize_data_timer);
                         _aggregate_evaluators[i]->function()->deserialize_from_column(
-                                _deserialize_buffer.data(), *column, _agg_arena_pool.get(), rows);
+                                _deserialize_buffer.data(), *column, &_agg_arena_pool, rows);
                     } else {
                         SCOPED_TIMER(_deserialize_data_timer);
                         _aggregate_evaluators[i]->function()->deserialize_vec(
                                 _deserialize_buffer.data(), (ColumnString*)(column.get()),
-                                _agg_arena_pool.get(), rows);
+                                &_agg_arena_pool, rows);
                     }
                     _aggregate_evaluators[i]->function()->merge_vec(
                             _places.data(), _offsets_of_aggregate_states[i],
-                            _deserialize_buffer.data(), _agg_arena_pool.get(), rows);
+                            _deserialize_buffer.data(), &_agg_arena_pool, rows);
 
                     _aggregate_evaluators[i]->function()->destroy_vec(_deserialize_buffer.data(),
                                                                       rows);
 
                 } else {
-                    _aggregate_evaluators[i]->execute_batch_add(
-                            block, _offsets_of_aggregate_states[i], _places.data(),
-                            _agg_arena_pool.get());
+                    _aggregate_evaluators[i]->execute_batch_add(block,
+                                                                _offsets_of_aggregate_states[i],
+                                                                _places.data(), &_agg_arena_pool);
                 }
             }
 
@@ -1061,8 +1023,6 @@ private:
     void _find_in_hash_table(AggregateDataPtr* places, ColumnRawPtrs& key_columns, size_t num_rows);
 
     void release_tracker();
-
-    void _release_mem();
 
     using vectorized_execute = std::function<Status(Block* block)>;
     using vectorized_pre_agg = std::function<Status(Block* in_block, Block* out_block)>;

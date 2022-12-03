@@ -95,6 +95,8 @@ TEST_F(FragmentMgrTest, CancelNormal) {
     params.params.fragment_instance_id.__set_hi(100);
     params.params.fragment_instance_id.__set_lo(200);
     EXPECT_TRUE(mgr.exec_plan_fragment(params).ok());
+    // Cancel after add
+    EXPECT_TRUE(mgr.cancel(params.params.fragment_instance_id).ok());
 }
 
 TEST_F(FragmentMgrTest, CancelWithoutAdd) {
@@ -103,6 +105,7 @@ TEST_F(FragmentMgrTest, CancelWithoutAdd) {
     params.params.fragment_instance_id = TUniqueId();
     params.params.fragment_instance_id.__set_hi(100);
     params.params.fragment_instance_id.__set_lo(200);
+    EXPECT_TRUE(mgr.cancel(params.params.fragment_instance_id).ok());
 }
 
 TEST_F(FragmentMgrTest, PrepareFailed) {

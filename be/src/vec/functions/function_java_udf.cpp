@@ -17,6 +17,7 @@
 
 #include "vec/functions/function_java_udf.h"
 
+#ifdef LIBJVM
 #include <fmt/format.h>
 
 #include <memory>
@@ -222,3 +223,4 @@ Status JavaFunctionCall::close(FunctionContext* context,
     return Status::OK();
 }
 } // namespace doris::vectorized
+#endif

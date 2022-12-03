@@ -18,12 +18,11 @@
 package org.apache.doris.nereids.trees.expressions.literal;
 
 import org.apache.doris.analysis.LiteralExpr;
-import org.apache.doris.catalog.Type;
+import org.apache.doris.catalog.ScalarType;
 import org.apache.doris.nereids.exceptions.AnalysisException;
 import org.apache.doris.nereids.trees.expressions.visitor.ExpressionVisitor;
 import org.apache.doris.nereids.types.DataType;
 import org.apache.doris.nereids.types.DateType;
-import org.apache.doris.nereids.types.coercion.DateLikeType;
 import org.apache.doris.nereids.util.DateUtils;
 
 import org.apache.logging.log4j.LogManager;
@@ -36,12 +35,13 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class DateLiteral extends Literal {
 
-    protected static DateTimeFormatter DATE_FORMATTER = null;
-    protected static DateTimeFormatter DATE_FORMATTER_TWO_DIGIT = null;
-    protected static DateTimeFormatter DATEKEY_FORMATTER = null;
-
     private static final Logger LOG = LogManager.getLogger(DateLiteral.class);
+
     private static final int DATEKEY_LENGTH = 8;
+
+    private static DateTimeFormatter DATE_FORMATTER = null;
+    private static DateTimeFormatter DATE_FORMATTER_TWO_DIGIT = null;
+    private static DateTimeFormatter DATEKEY_FORMATTER = null;
 
     protected long year;
     protected long month;
@@ -59,11 +59,7 @@ public class DateLiteral extends Literal {
     }
 
     public DateLiteral(String s) throws AnalysisException {
-        this(DateType.INSTANCE, s);
-    }
-
-    protected DateLiteral(DateLikeType dataType, String s) throws AnalysisException {
-        super(dataType);
+        super(DataType.fromCatalogType(ScalarType.createDateType()));
         init(s);
     }
 
@@ -75,14 +71,7 @@ public class DateLiteral extends Literal {
      * C'tor for date type.
      */
     public DateLiteral(long year, long month, long day) {
-        this(DateType.INSTANCE, year, month, day);
-    }
-
-    /**
-     * C'tor for date type.
-     */
-    public DateLiteral(DateLikeType dataType, long year, long month, long day) {
-        super(dataType);
+        super(DateType.INSTANCE);
         this.year = year;
         this.month = month;
         this.day = day;
@@ -98,7 +87,7 @@ public class DateLiteral extends Literal {
         this.day = other.day;
     }
 
-    protected void init(String s) throws AnalysisException {
+    private void init(String s) throws AnalysisException {
         try {
             LocalDateTime dateTime;
             if (s.split("-")[0].length() == 2) {
@@ -117,13 +106,13 @@ public class DateLiteral extends Literal {
     }
 
     @Override
-    public Long getValue() {
-        return (year * 10000 + month * 100 + day) * 1000000L;
+    public <R, C> R accept(ExpressionVisitor<R, C> visitor, C context) {
+        return visitor.visitDateLiteral(this, context);
     }
 
     @Override
-    public String getStringValue() {
-        return String.format("%04d-%02d-%02d", year, month, day);
+    public Long getValue() {
+        return (year * 10000 + month * 100 + day) * 1000000L;
     }
 
     @Override
@@ -132,18 +121,18 @@ public class DateLiteral extends Literal {
     }
 
     @Override
-    public <R, C> R accept(ExpressionVisitor<R, C> visitor, C context) {
-        return visitor.visitDateLiteral(this, context);
-    }
-
-    @Override
     public String toString() {
         return String.format("%04d-%02d-%02d", year, month, day);
     }
 
     @Override
+    public String getStringValue() {
+        return String.format("%04d-%02d-%02d", year, month, day);
+    }
+
+    @Override
     public LiteralExpr toLegacyLiteral() {
-        return new org.apache.doris.analysis.DateLiteral(year, month, day, Type.DATE);
+        return new org.apache.doris.analysis.DateLiteral(year, month, day);
     }
 
     public long getYear() {

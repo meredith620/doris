@@ -58,10 +58,6 @@ public class TVFScanProvider extends QueryScanProvider {
         this.tableValuedFunction = tableValuedFunction;
     }
 
-    public String getFsName() {
-        return tableValuedFunction.getFsName();
-    }
-
     // =========== implement abstract methods of QueryScanProvider =================
     @Override
     public TFileAttributes getFileAttributes() throws UserException {

@@ -35,7 +35,6 @@ public class InitDatabaseLog implements Writable {
     public enum Type {
         HMS,
         ES,
-        JDBC,
         UNKNOWN;
     }
 

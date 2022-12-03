@@ -16,6 +16,7 @@
 // under the License.
 
 #pragma once
+#ifdef LIBJVM
 
 #include "runtime/runtime_state.h"
 #include "vec/exec/scan/new_jdbc_scan_node.h"
@@ -25,8 +26,8 @@ namespace doris {
 namespace vectorized {
 class NewJdbcScanner : public VScanner {
 public:
-    NewJdbcScanner(RuntimeState* state, NewJdbcScanNode* parent, int64_t limit,
-                   const TupleId& tuple_id, const std::string& query_string);
+    NewJdbcScanner(RuntimeState* state, NewJdbcScanNode* parent, int64_t limit, TupleId tuple_id,
+                   std::string query_string);
 
     Status open(RuntimeState* state) override;
     Status close(RuntimeState* state) override;
@@ -54,3 +55,4 @@ private:
 };
 } // namespace vectorized
 } // namespace doris
+#endif

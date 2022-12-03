@@ -75,10 +75,6 @@ Other articles have already explained:
 * [Build with LDB toolchain ](/docs/install/source-install/compilation-with-ldb-toolchain)
 * ......
 
-In order to debug, you need to add debugging parameters when fe starts, such as 
+In order to debug, you need to add debugging parameters when fe starts, such as `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005` .
 
-```bash
--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
-```
-
-In `doris/output/fe/bin/start_fe.sh` , after `$JAVA $final_java_opt` add this param.
+In `incubator-doris/output/fe/bin/start_fe.sh` , after `$JAVA $final_java_opt` add this param.

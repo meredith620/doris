@@ -17,6 +17,7 @@
 
 #include "util/jni-util.h"
 
+#ifdef LIBJVM
 #include <jni.h>
 #include <jni_md.h>
 #include <stdlib.h>
@@ -289,3 +290,4 @@ Status JniUtil::Init() {
 }
 
 } // namespace doris
+#endif

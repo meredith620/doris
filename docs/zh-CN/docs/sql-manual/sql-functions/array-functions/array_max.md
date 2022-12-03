@@ -1,6 +1,6 @@
 ---
 {
-    "title": "array_max",
+    "title": "ARRAY_MAX 函数",
     "language": "zh-CN"
 }
 ---
@@ -24,7 +24,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-## array_max
+## ARRAY_MAX
+
+### Name
+
+ARRAY_MAX
 
 ### description
 

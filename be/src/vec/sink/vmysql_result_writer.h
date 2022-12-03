@@ -43,8 +43,6 @@ public:
 
     virtual Status append_block(Block& block) override;
 
-    virtual bool can_sink() override;
-
     virtual Status close() override;
 
 private:

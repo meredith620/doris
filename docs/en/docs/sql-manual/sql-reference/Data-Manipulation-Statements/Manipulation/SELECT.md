@@ -39,7 +39,7 @@ grammar:
 
 ```sql
 SELECT
-    [ALL | DISTINCT | DISTINCTROW | ALL EXCEPT ( col_name1 [, col_name2, col_name3, ...] )]
+    [ALL | DISTINCT | DISTINCTROW ]
     select_expr [, select_expr ...]
     [FROM table_references
       [PARTITION partition_list]
@@ -65,28 +65,26 @@ SELECT
    3. where_definition retrieves the condition (expression), if there is a WHERE clause, the condition filters the row data. where_condition is an expression that evaluates to true for each row to be selected. Without the WHERE clause, the statement selects all rows. In WHERE expressions, you can use any MySQL supported functions and operators except aggregate functions
 
    4. `ALL | DISTINCT ` : to refresh the result set, all is all, distinct/distinctrow will refresh the duplicate columns, the default is all
-   
-   5. <version since="1.2" type="inline"> `ALL EXCEPT`: Filter on the full (all) result set, except specifies the name of one or more columns to be excluded from the full result set. All matching column names will be ignored in the output. </version>
 
-   6. `INTO OUTFILE 'file_name' ` : save the result to a new file (which did not exist before), the difference lies in the save format.
+   5. `INTO OUTFILE 'file_name' ` : save the result to a new file (which did not exist before), the difference lies in the save format.
 
-   7. `Group [asc/desc]by having`: Group the result set, and brush the result of group by when having appears.
+   6. `Group [asc/desc]by having`: Group the result set, and brush the result of group by when having appears.
 
-   8. `Order by`: Sort the final result, Order by sorts the result set by comparing the size of one or more columns.
+   7. `Order by`: Sort the final result, Order by sorts the result set by comparing the size of one or more columns.
 
       Order by is a time-consuming and resource-intensive operation, because all data needs to be sent to 1 node before it can be sorted, and the sorting operation requires more memory than the non-sorting operation.
 
       If you need to return the top N sorted results, you need to use the LIMIT clause; in order to limit memory usage, if the user does not specify the LIMIT clause, the first 65535 sorted results are returned by default.
 
-   9. `Limit n`: limit the number of lines in the output result, `limit m,n` means output n records starting from the mth line.
+   8. `Limit n`: limit the number of lines in the output result, `limit m,n` means output n records starting from the mth line.
 
-   10. The `Having` clause does not filter the row data in the table, but filters the results produced by the aggregate function.
+   9. The `Having` clause does not filter the row data in the table, but filters the results produced by the aggregate function.
 
-       Typically `having` is used with aggregate functions (eg :`COUNT(), SUM(), AVG(), MIN(), MAX()`) and `group by` clauses.
+      Typically `having` is used with aggregate functions (eg :`COUNT(), SUM(), AVG(), MIN(), MAX()`) and `group by` clauses.
 
-   11. SELECT supports explicit partition selection using PARTITION containing a list of partitions or subpartitions (or both) following the name of the table in `table_reference`
+   10. SELECT supports explicit partition selection using PARTITION containing a list of partitions or subpartitions (or both) following the name of the table in `table_reference`
 
-   12. `[TABLET tids] TABLESAMPLE n [ROWS | PERCENT] [REPEATABLE seek]`: Limit the number of rows read from the table in the FROM clause, select a number of Tablets pseudo-randomly from the table according to the specified number of rows or percentages, and specify the number of seeds in REPEATABLE to return the selected samples again. In addition, you can also manually specify the TableID, Note that this can only be used for OLAP tables.
+   11. `[TABLET tids] TABLESAMPLE n [ROWS | PERCENT] [REPEATABLE seek]`: Limit the number of rows read from the table in the FROM clause, select a number of Tablets pseudo-randomly from the table according to the specified number of rows or percentages, and specify the number of seeds in REPEATABLE to return the selected samples again. In addition, you can also manually specify the TableID, Note that this can only be used for OLAP tables.
 
 **Syntax constraints:**
 
@@ -165,27 +163,22 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
    ```sql
    select Name from student where age in (18,20,25);
    ```
-2. ALL EXCEPT Example
-   ```sql
-   -- Query all information except the students' age
-   select * except(age) from student; 
-   ```
    
-3. GROUP BY Example
+2. GROUP BY Example
 
    ```sql
    --Query the tb_book table, group by type, and find the average price of each type of book,
    select type,avg(price) from tb_book group by type;
    ```
 
-4. DISTINCT Use
+3. DISTINCT Use
 
    ```
    --Query the tb_book table to remove duplicate type data
    select distinct type from tb_book;
    ```
 
-5. ORDER BY Example
+4. ORDER BY Example
 
    Sort query results in ascending (default) or descending (DESC) order. Ascending NULL is first, descending NULL is last
 
@@ -194,7 +187,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
    select * from tb_book order by id desc limit 3;
    ```
 
-6. LIKE fuzzy query
+5. LIKE fuzzy query
 
    Can realize fuzzy query, it has two wildcards: `%` and `_`, `%` can match one or more characters, `_` can match one character
 
@@ -203,7 +196,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
    select * from tb_book where name like('_h%');
    ```
 
-7. LIMIT limits the number of result rows
+6. LIMIT limits the number of result rows
 
    ```sql
    --1. Display 3 records in descending order
@@ -213,14 +206,14 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
    select * from tb_book where id limit 1,4;
    ```
 
-8. CONCAT join multiple columns
+7. CONCAT join multiple columns
 
    ```sql
    --Combine name and price into a new string output
    select id,concat(name,":",price) as info,type from tb_book;
    ```
 
-9. Using functions and expressions
+8. Using functions and expressions
 
    ```sql
    --Calculate the total price of various books in the tb_book table
@@ -229,15 +222,15 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
    select *,(price * 0.8) as "20%" from tb_book;
    ```
 
-10. UNION Example
+9. UNION Example
 
-    ```sql
-    SELECT a FROM t1 WHERE a = 10 AND B = 1 ORDER by LIMIT 10
-    UNION
-    SELECT a FROM t2 WHERE a = 11 AND B = 2 ORDER by LIMIT 10;
-    ```
+   ```sql
+   SELECT a FROM t1 WHERE a = 10 AND B = 1 ORDER by LIMIT 10
+   UNION
+   SELECT a FROM t2 WHERE a = 11 AND B = 2 ORDER by LIMIT 10;
+   ```
 
-11. WITH clause example
+10. WITH clause example
 
     ```sql
     WITH cte AS
@@ -249,7 +242,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
     SELECT col1, col2 FROM cte;
     ```
 
-12. JOIN Exampel
+11. JOIN Exampel
 
     ```sql
     SELECT * FROM t1 LEFT JOIN (t2, t3, t4)
@@ -263,7 +256,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
                      ON (t2.a = t1.a AND t3.b = t1.b AND t4.c = t1.c)
     ```
 
-13. INNER JOIN
+12. INNER JOIN
 
     ```sql
     SELECT t1.name, t2.salary
@@ -273,7 +266,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
       FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name;
     ```
 
-14. LEFT JOIN
+13. LEFT JOIN
 
     ```sql
     SELECT left_tbl.*
@@ -281,7 +274,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
       WHERE right_tbl.id IS NULL;
     ```
 
-15. RIGHT JOIN
+14. RIGHT JOIN
 
     ```sql
     mysql> SELECT * FROM t1 RIGHT JOIN t2 ON (t1.a = t2.a);
@@ -293,7 +286,7 @@ A CTE can refer to itself to define a recursive CTE. Common applications of recu
     +------+------+------+------+
     ```
 
-16. TABLESAMPLE
+15. TABLESAMPLE
 
     ```sql
     --Pseudo-randomly sample 1000 rows in t1. Note that several Tablets are actually selected according to the statistics of the table, and the total number of selected Tablet rows may be greater than 1000, so if you want to explicitly return 1000 rows, you need to add Limit.

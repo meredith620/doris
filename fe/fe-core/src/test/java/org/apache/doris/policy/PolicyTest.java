@@ -27,7 +27,6 @@ import org.apache.doris.analysis.UserIdentity;
 import org.apache.doris.catalog.AccessPrivilege;
 import org.apache.doris.catalog.Env;
 import org.apache.doris.common.AnalysisException;
-import org.apache.doris.common.Config;
 import org.apache.doris.common.DdlException;
 import org.apache.doris.common.ExceptionChecker;
 import org.apache.doris.common.FeConstants;
@@ -52,7 +51,6 @@ public class PolicyTest extends TestWithFeService {
 
     @Override
     protected void runBeforeAll() throws Exception {
-        Config.enable_storage_policy = true;
         FeConstants.runningUnitTest = true;
         createDatabase("test");
         useDatabase("test");

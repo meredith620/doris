@@ -21,7 +21,6 @@
 package org.apache.doris.planner;
 
 import org.apache.doris.analysis.Analyzer;
-import org.apache.doris.analysis.BitmapFilterPredicate;
 import org.apache.doris.analysis.CompoundPredicate;
 import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.ExprId;
@@ -234,10 +233,6 @@ public abstract class PlanNode extends TreeNode<PlanNode> implements PlanStats {
 
     public PlanFragmentId getFragmentId() {
         return fragment.getFragmentId();
-    }
-
-    public int getFragmentSeqenceNum() {
-        return fragment.getFragmentSequenceNum();
     }
 
     public void setFragmentId(PlanFragmentId id) {
@@ -892,7 +887,7 @@ public abstract class PlanNode extends TreeNode<PlanNode> implements PlanStats {
     public String getPlanTreeExplainStr() {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(getId().asInt()).append(": ").append(getPlanNodeName()).append("]");
-        sb.append("\n[Fragment: ").append(getFragmentSeqenceNum()).append("]");
+        sb.append("\n[Fragment: ").append(getFragmentId().asInt()).append("]");
         sb.append("\n").append(getNodeExplainString("", TExplainLevel.BRIEF));
         return sb.toString();
     }
@@ -923,7 +918,7 @@ public abstract class PlanNode extends TreeNode<PlanNode> implements PlanStats {
         runtimeFilters.clear();
     }
 
-    protected String getRuntimeFilterExplainString(boolean isBuildNode, boolean isBrief) {
+    protected String getRuntimeFilterExplainString(boolean isBuildNode) {
         if (runtimeFilters.isEmpty()) {
             return "";
         }
@@ -931,36 +926,24 @@ public abstract class PlanNode extends TreeNode<PlanNode> implements PlanStats {
         for (RuntimeFilter filter : runtimeFilters) {
             StringBuilder filterStr = new StringBuilder();
             filterStr.append(filter.getFilterId());
-            if (!isBrief) {
-                filterStr.append("[");
-                filterStr.append(filter.getType().toString().toLowerCase());
-                filterStr.append("]");
-                if (isBuildNode) {
-                    filterStr.append(" <- ");
-                    filterStr.append(filter.getSrcExpr().toSql());
-                } else {
-                    filterStr.append(" -> ");
-                    filterStr.append(filter.getTargetExpr(getId()).toSql());
-                }
+            filterStr.append("[");
+            filterStr.append(filter.getType().toString().toLowerCase());
+            filterStr.append("]");
+            if (isBuildNode) {
+                filterStr.append(" <- ");
+                filterStr.append(filter.getSrcExpr().toSql());
+            } else {
+                filterStr.append(" -> ");
+                filterStr.append(filter.getTargetExpr(getId()).toSql());
             }
             filtersStr.add(filterStr.toString());
         }
         return Joiner.on(", ").join(filtersStr) + "\n";
     }
 
-    protected String getRuntimeFilterExplainString(boolean isBuildNode) {
-        return getRuntimeFilterExplainString(isBuildNode, false);
-    }
-
     public void convertToVectoriezd() {
-        List<Expr> conjunctsExcludeBitmapFilter = Lists.newArrayList();
-        for (Expr expr : conjuncts) {
-            if (!(expr instanceof BitmapFilterPredicate)) {
-                conjunctsExcludeBitmapFilter.add(expr);
-            }
-        }
-        if (!conjunctsExcludeBitmapFilter.isEmpty()) {
-            vconjunct = convertConjunctsToAndCompoundPredicate(conjunctsExcludeBitmapFilter);
+        if (!conjuncts.isEmpty()) {
+            vconjunct = convertConjunctsToAndCompoundPredicate(conjuncts);
             initCompoundPredicate(vconjunct);
         }
 

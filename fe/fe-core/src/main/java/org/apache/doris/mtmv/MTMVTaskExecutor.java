@@ -99,7 +99,7 @@ public class MTMVTaskExecutor implements Comparable<MTMVTaskExecutor> {
         ctx = new ConnectContext();
         ctx.setDatabase(job.getDbName());
         ctx.setQualifiedUser(task.getUser());
-        ctx.setCurrentUserIdentity(UserIdentity.createAnalyzedUserIdentWithIp(job.getUser(), "%"));
+        ctx.setCurrentUserIdentity(UserIdentity.createAnalyzedUserIdentWithIp(job.getCreateUser(), "%"));
         ctx.getState().reset();
         UUID taskId = UUID.fromString(task.getTaskId());
         TUniqueId queryId = new TUniqueId(taskId.getMostSignificantBits(), taskId.getLeastSignificantBits());
@@ -113,7 +113,7 @@ public class MTMVTaskExecutor implements Comparable<MTMVTaskExecutor> {
         processor.process(taskContext);
         QueryState queryState = ctx.getState();
         if (ctx.getState().getStateType() == QueryState.MysqlStateType.ERR) {
-            task.setMessage(queryState.getErrorMessage());
+            task.setErrorMessage(queryState.getErrorMessage());
             int errorCode = -1;
             if (queryState.getErrorCode() != null) {
                 errorCode = queryState.getErrorCode().getCode();
@@ -138,15 +138,14 @@ public class MTMVTaskExecutor implements Comparable<MTMVTaskExecutor> {
         task.setTaskId(taskId);
         task.setJobName(job.getName());
         if (createTime == null) {
-            task.setCreateTime(MTMVUtils.getNowTimeStamp());
+            task.setCreateTime(System.currentTimeMillis());
         } else {
             task.setCreateTime(createTime);
         }
-        task.setMvName(job.getMvName());
-        task.setUser(job.getUser());
+        task.setUser(job.getCreateUser());
         task.setDbName(job.getDbName());
         task.setQuery(job.getQuery());
-        task.setExpireTime(MTMVUtils.getNowTimeStamp() + Config.scheduler_mtmv_task_expired);
+        task.setExpireTime(System.currentTimeMillis() + Config.scheduler_mtmv_task_expire_ms);
         task.setRetryTimes(job.getRetryPolicy().getTimes());
         this.task = task;
         return task;

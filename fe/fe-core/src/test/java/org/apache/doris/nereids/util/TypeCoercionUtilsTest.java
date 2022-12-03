@@ -25,7 +25,7 @@ import org.apache.doris.nereids.types.CharType;
 import org.apache.doris.nereids.types.DataType;
 import org.apache.doris.nereids.types.DateTimeType;
 import org.apache.doris.nereids.types.DateType;
-import org.apache.doris.nereids.types.DecimalV2Type;
+import org.apache.doris.nereids.types.DecimalType;
 import org.apache.doris.nereids.types.DoubleType;
 import org.apache.doris.nereids.types.FloatType;
 import org.apache.doris.nereids.types.IntegerType;
@@ -61,9 +61,9 @@ public class TypeCoercionUtilsTest {
     @Test
     public void testImplicitCastNumericWithExpectDecimal() {
         BigIntType bigIntType = BigIntType.INSTANCE;
-        DecimalV2Type decimalV2Type = DecimalV2Type.createDecimalV2Type(27, 9);
-        Assertions.assertEquals(DecimalV2Type.forType(bigIntType),
-                TypeCoercionUtils.implicitCast(bigIntType, decimalV2Type).get());
+        DecimalType decimalType = DecimalType.createDecimalType(27, 9);
+        Assertions.assertEquals(DecimalType.forType(bigIntType),
+                TypeCoercionUtils.implicitCast(bigIntType, decimalType).get());
     }
 
     @Test
@@ -76,8 +76,8 @@ public class TypeCoercionUtilsTest {
     @Test
     public void testImplicitCastStringToDecimal() {
         StringType stringType = StringType.INSTANCE;
-        DecimalV2Type decimalV2Type = DecimalV2Type.SYSTEM_DEFAULT;
-        Assertions.assertEquals(decimalV2Type, TypeCoercionUtils.implicitCast(stringType, decimalV2Type).get());
+        DecimalType decimalType = DecimalType.SYSTEM_DEFAULT;
+        Assertions.assertEquals(decimalType, TypeCoercionUtils.implicitCast(stringType, decimalType).get());
     }
 
     @Test
@@ -103,15 +103,15 @@ public class TypeCoercionUtilsTest {
 
     @Test
     public void testCanHandleTypeCoercion() {
-        DecimalV2Type decimalV2Type = DecimalV2Type.SYSTEM_DEFAULT;
+        DecimalType decimalType = DecimalType.SYSTEM_DEFAULT;
         NullType nullType = NullType.INSTANCE;
         SmallIntType smallIntType = SmallIntType.INSTANCE;
         IntegerType integerType = IntegerType.INSTANCE;
-        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(decimalV2Type, nullType));
-        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(nullType, decimalV2Type));
+        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(decimalType, nullType));
+        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(nullType, decimalType));
         Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(smallIntType, integerType));
-        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(integerType, decimalV2Type));
-        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(decimalV2Type, integerType));
+        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(integerType, decimalType));
+        Assertions.assertTrue(TypeCoercionUtils.canHandleTypeCoercion(decimalType, integerType));
         Assertions.assertFalse(TypeCoercionUtils.canHandleTypeCoercion(integerType, integerType));
     }
 
@@ -126,7 +126,7 @@ public class TypeCoercionUtilsTest {
         Assertions.assertFalse(TypeCoercionUtils.hasCharacterType(LargeIntType.INSTANCE));
         Assertions.assertFalse(TypeCoercionUtils.hasCharacterType(FloatType.INSTANCE));
         Assertions.assertFalse(TypeCoercionUtils.hasCharacterType(DoubleType.INSTANCE));
-        Assertions.assertFalse(TypeCoercionUtils.hasCharacterType(DecimalV2Type.SYSTEM_DEFAULT));
+        Assertions.assertFalse(TypeCoercionUtils.hasCharacterType(DecimalType.SYSTEM_DEFAULT));
         Assertions.assertTrue(TypeCoercionUtils.hasCharacterType(CharType.createCharType(10)));
         Assertions.assertTrue(TypeCoercionUtils.hasCharacterType(VarcharType.createVarcharType(10)));
         Assertions.assertTrue(TypeCoercionUtils.hasCharacterType(StringType.INSTANCE));
@@ -139,13 +139,13 @@ public class TypeCoercionUtilsTest {
         testFindTightestCommonType(IntegerType.INSTANCE, IntegerType.INSTANCE, IntegerType.INSTANCE);
         testFindTightestCommonType(IntegerType.INSTANCE, NullType.INSTANCE, IntegerType.INSTANCE);
         testFindTightestCommonType(IntegerType.INSTANCE, IntegerType.INSTANCE, NullType.INSTANCE);
-        testFindTightestCommonType(DecimalV2Type.SYSTEM_DEFAULT, IntegerType.INSTANCE, DecimalV2Type.SYSTEM_DEFAULT);
-        testFindTightestCommonType(DecimalV2Type.SYSTEM_DEFAULT, DecimalV2Type.SYSTEM_DEFAULT, IntegerType.INSTANCE);
+        testFindTightestCommonType(DecimalType.SYSTEM_DEFAULT, IntegerType.INSTANCE, DecimalType.SYSTEM_DEFAULT);
+        testFindTightestCommonType(DecimalType.SYSTEM_DEFAULT, DecimalType.SYSTEM_DEFAULT, IntegerType.INSTANCE);
         testFindTightestCommonType(BigIntType.INSTANCE, BigIntType.INSTANCE, IntegerType.INSTANCE);
         testFindTightestCommonType(BigIntType.INSTANCE, IntegerType.INSTANCE, BigIntType.INSTANCE);
         testFindTightestCommonType(StringType.INSTANCE, StringType.INSTANCE, IntegerType.INSTANCE);
         testFindTightestCommonType(StringType.INSTANCE, IntegerType.INSTANCE, StringType.INSTANCE);
-        testFindTightestCommonType(null, DecimalV2Type.SYSTEM_DEFAULT, DecimalV2Type.createDecimalV2Type(2, 1));
+        testFindTightestCommonType(null, DecimalType.SYSTEM_DEFAULT, DecimalType.createDecimalType(2, 1));
         testFindTightestCommonType(VarcharType.createVarcharType(10), CharType.createCharType(8), CharType.createCharType(10));
         testFindTightestCommonType(VarcharType.createVarcharType(10), VarcharType.createVarcharType(8), VarcharType.createVarcharType(10));
         testFindTightestCommonType(VarcharType.createVarcharType(10), VarcharType.createVarcharType(8), CharType.createCharType(10));
@@ -160,25 +160,25 @@ public class TypeCoercionUtilsTest {
 
     @Test
     public void testFindWiderTypeForDecimal() {
-        Assertions.assertEquals(DecimalV2Type.SYSTEM_DEFAULT,
+        Assertions.assertEquals(DecimalType.SYSTEM_DEFAULT,
                 TypeCoercionUtils.findWiderTypeForDecimal(
-                        DecimalV2Type.SYSTEM_DEFAULT, DecimalV2Type.SYSTEM_DEFAULT).get());
-        Assertions.assertEquals(DecimalV2Type.SYSTEM_DEFAULT,
+                        DecimalType.SYSTEM_DEFAULT, DecimalType.SYSTEM_DEFAULT).get());
+        Assertions.assertEquals(DecimalType.SYSTEM_DEFAULT,
                 TypeCoercionUtils.findWiderTypeForDecimal(
-                        DecimalV2Type.SYSTEM_DEFAULT, TinyIntType.INSTANCE).get());
-        Assertions.assertEquals(DecimalV2Type.SYSTEM_DEFAULT,
+                        DecimalType.SYSTEM_DEFAULT, TinyIntType.INSTANCE).get());
+        Assertions.assertEquals(DecimalType.SYSTEM_DEFAULT,
                 TypeCoercionUtils.findWiderTypeForDecimal(
-                        TinyIntType.INSTANCE, DecimalV2Type.SYSTEM_DEFAULT).get());
+                        TinyIntType.INSTANCE, DecimalType.SYSTEM_DEFAULT).get());
         Assertions.assertEquals(DoubleType.INSTANCE,
                 TypeCoercionUtils.findWiderTypeForDecimal(
-                        DecimalV2Type.SYSTEM_DEFAULT, FloatType.INSTANCE).get());
+                        DecimalType.SYSTEM_DEFAULT, FloatType.INSTANCE).get());
         Assertions.assertEquals(DoubleType.INSTANCE,
                 TypeCoercionUtils.findWiderTypeForDecimal(
-                        DoubleType.INSTANCE, DecimalV2Type.SYSTEM_DEFAULT).get());
+                        DoubleType.INSTANCE, DecimalType.SYSTEM_DEFAULT).get());
         Assertions.assertFalse(TypeCoercionUtils.findWiderTypeForDecimal(
-                StringType.INSTANCE, DecimalV2Type.SYSTEM_DEFAULT).isPresent());
+                StringType.INSTANCE, DecimalType.SYSTEM_DEFAULT).isPresent());
         Assertions.assertFalse(TypeCoercionUtils.findWiderTypeForDecimal(
-                DecimalV2Type.SYSTEM_DEFAULT, StringType.INSTANCE).isPresent());
+                DecimalType.SYSTEM_DEFAULT, StringType.INSTANCE).isPresent());
     }
 
     @Test

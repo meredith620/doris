@@ -28,11 +28,7 @@ under the License.
 
 ### Name
 
-<version since="1.2">
-
 CLEAN LABEL
-
-</version>
 
 ### Description
 

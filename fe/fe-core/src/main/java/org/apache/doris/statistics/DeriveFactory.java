@@ -27,8 +27,8 @@ public class DeriveFactory {
                 return new AnalyticEvalStatsDerive();
             case ASSERT_NUM_ROWS_NODE:
                 return new AssertNumRowsStatsDerive();
-            case NESTED_LOOP_JOIN_NODE:
-                return new NestedLoopJoinStatsDerive();
+            case CROSS_JOIN_NODE:
+                return new CrossJoinStatsDerive();
             case EMPTY_SET_NODE:
             case REPEAT_NODE:
                 return new EmptySetStatsDerive();

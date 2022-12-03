@@ -406,14 +406,13 @@ bool persist_config(const std::string& field, const std::string& value) {
     return tmp_props.dump(conffile);
 }
 
-Status set_config(const std::string& field, const std::string& value, bool need_persist,
-                  bool force) {
+Status set_config(const std::string& field, const std::string& value, bool need_persist) {
     auto it = Register::_s_field_map->find(field);
     if (it == Register::_s_field_map->end()) {
         return Status::NotFound("'{}' is not found", field);
     }
 
-    if (!force && !it->second.valmutable) {
+    if (!it->second.valmutable) {
         return Status::NotSupported("'{}' is not support to modify", field);
     }
 
@@ -431,20 +430,6 @@ Status set_config(const std::string& field, const std::string& value, bool need_
     // The other types are not thread safe to change dynamically.
     return Status::NotSupported("'{}' is type of '{}' which is not support to modify", field,
                                 it->second.type);
-}
-
-Status set_fuzzy_config(const std::string& field, const std::string& value) {
-    return set_config(field, value, false, true);
-}
-
-void set_fuzzy_configs() {
-    // random value true or false
-    Status s =
-            set_fuzzy_config("disable_storage_page_cache", ((rand() % 2) == 0) ? "true" : "false");
-    LOG(INFO) << s.to_string();
-    // random value from 8 to 48
-    // s = set_fuzzy_config("doris_scanner_thread_pool_thread_num", std::to_string((rand() % 41) + 8));
-    // LOG(INFO) << s.to_string();
 }
 
 std::mutex* get_mutable_string_config_lock() {

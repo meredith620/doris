@@ -21,6 +21,10 @@ package org.apache.doris.statistics;
  * Derive AssertNumRowsNode statistics.
  */
 public class AssertNumRowsStatsDerive extends BaseStatsDerive {
+    @Override
+    public StatsDeriveResult deriveStats() {
+        return new StatsDeriveResult(deriveRowCount(), deriveColumnToDataSize(), deriveColumnToNdv());
+    }
 
     @Override
     protected long deriveRowCount() {

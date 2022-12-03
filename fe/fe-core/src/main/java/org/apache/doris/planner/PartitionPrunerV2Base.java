@@ -22,7 +22,6 @@ import org.apache.doris.catalog.PartitionItem;
 import org.apache.doris.catalog.PartitionKey;
 import org.apache.doris.common.AnalysisException;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -41,26 +40,13 @@ public abstract class PartitionPrunerV2Base implements PartitionPruner {
     protected final Map<Long, PartitionItem> idToPartitionItem;
     protected final List<Column> partitionColumns;
     protected final Map<String, ColumnRange> columnNameToRange;
-    // used for single column partition
-    protected RangeMap<ColumnBound, UniqueId> singleColumnRangeMap = null;
 
     public PartitionPrunerV2Base(Map<Long, PartitionItem> idToPartitionItem,
-            List<Column> partitionColumns,
-            Map<String, ColumnRange> columnNameToRange) {
+                                 List<Column> partitionColumns,
+                                 Map<String, ColumnRange> columnNameToRange) {
         this.idToPartitionItem = idToPartitionItem;
         this.partitionColumns = partitionColumns;
         this.columnNameToRange = columnNameToRange;
-    }
-
-    // pass singleColumnRangeMap from outside
-    public PartitionPrunerV2Base(Map<Long, PartitionItem> idToPartitionItem,
-            List<Column> partitionColumns,
-            Map<String, ColumnRange> columnNameToRange,
-            RangeMap<ColumnBound, UniqueId> singleColumnRangeMap) {
-        this.idToPartitionItem = idToPartitionItem;
-        this.partitionColumns = partitionColumns;
-        this.columnNameToRange = columnNameToRange;
-        this.singleColumnRangeMap = singleColumnRangeMap;
     }
 
     @Override
@@ -84,7 +70,7 @@ public abstract class PartitionPrunerV2Base implements PartitionPruner {
         }
     }
 
-    abstract void genSingleColumnRangeMap();
+    abstract RangeMap<ColumnBound, UniqueId> getCandidateRangeMap();
 
     /**
      * Handle conjunctive and disjunctive `is null` predicates.
@@ -121,30 +107,29 @@ public abstract class PartitionPrunerV2Base implements PartitionPruner {
             case CONSTANT_FALSE_FILTERS:
                 return Collections.emptyList();
             case HAVE_FILTERS:
-                genSingleColumnRangeMap();
-                Preconditions.checkNotNull(singleColumnRangeMap);
+                RangeMap<ColumnBound, UniqueId> candidate = getCandidateRangeMap();
                 return finalFilters.filters.stream()
-                        .map(filter -> {
-                            RangeMap<ColumnBound, UniqueId> filtered = singleColumnRangeMap.subRangeMap(filter);
-                            return filtered.asMapOfRanges().values().stream()
-                                    .map(UniqueId::getPartitionId)
-                                    .collect(Collectors.toSet());
-                        })
-                        .flatMap(Set::stream)
-                        .collect(Collectors.toSet());
+                    .map(filter -> {
+                        RangeMap<ColumnBound, UniqueId> filtered = candidate.subRangeMap(filter);
+                        return filtered.asMapOfRanges().values().stream()
+                            .map(UniqueId::getPartitionId)
+                            .collect(Collectors.toSet());
+                    })
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toSet());
             case NO_FILTERS:
             default:
                 return idToPartitionItem.keySet();
         }
     }
 
-    protected static Range<ColumnBound> mapPartitionKeyRange(Range<PartitionKey> fromRange,
-            int columnIdx) {
+    protected Range<ColumnBound> mapPartitionKeyRange(Range<PartitionKey> fromRange,
+                                                      int columnIdx) {
         return mapRange(fromRange,
-                partitionKey -> ColumnBound.of(partitionKey.getKeys().get(columnIdx)));
+            partitionKey -> ColumnBound.of(partitionKey.getKeys().get(columnIdx)));
     }
 
-    private static <TO extends Comparable, FROM extends Comparable> Range<TO> mapRange(
+    protected <TO extends Comparable, FROM extends Comparable> Range<TO> mapRange(
             Range<FROM> range, Function<FROM, TO> mapper) {
         TO lower = range.hasLowerBound() ? mapper.apply(range.lowerEndpoint()) : null;
         TO upper = range.hasUpperBound() ? mapper.apply(range.upperEndpoint()) : null;
@@ -172,7 +157,7 @@ public abstract class PartitionPrunerV2Base implements PartitionPruner {
         }
     }
 
-    public interface UniqueId {
+    protected interface UniqueId {
         long getPartitionId();
     }
 

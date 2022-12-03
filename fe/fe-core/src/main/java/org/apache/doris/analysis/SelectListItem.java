@@ -132,7 +132,4 @@ public class SelectListItem {
         return expr.toColumnLabel();
     }
 
-    public void setAlias(String alias) {
-        this.alias = alias;
-    }
 }

@@ -71,7 +71,6 @@ public class TabletReplicaTooSlowTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        FeConstants.runningUnitTest = true;
         System.out.println(runningDir);
         FeConstants.runningUnitTest = true;
         FeConstants.tablet_checker_interval_ms = 1000;

@@ -703,13 +703,8 @@ inline T StringParser::string_to_decimal(const char* s, int len, int type_precis
                 return 0;
             }
             *result = StringParser::PARSE_SUCCESS;
-            if constexpr (std::is_same_v<T, vectorized::Int128I>) {
-                value *= get_scale_multiplier<__int128>(type_scale - scale);
-            } else {
-                value *= get_scale_multiplier<T>(type_scale - scale);
-            }
-
-            return is_negative ? T(-value) : T(value);
+            value *= get_scale_multiplier<T>(type_scale - scale);
+            return is_negative ? -value : value;
         }
     }
 
@@ -719,12 +714,7 @@ inline T StringParser::string_to_decimal(const char* s, int len, int type_precis
         // Ex: 0.1e3 (which at this point would have precision == 1 and scale == 1), the
         //     scale must be set to 0 and the value set to 100 which means a precision of 3.
         precision += exponent - scale;
-
-        if constexpr (std::is_same_v<T, vectorized::Int128I>) {
-            value *= get_scale_multiplier<__int128>(exponent - scale);
-        } else {
-            value *= get_scale_multiplier<T>(exponent - scale);
-        }
+        value *= get_scale_multiplier<T>(exponent - scale);
         scale = 0;
     } else {
         // Ex: 100e-4, the scale must be set to 4 but no adjustment to the value is needed,
@@ -750,16 +740,11 @@ inline T StringParser::string_to_decimal(const char* s, int len, int type_precis
             shift -= truncated_digit_count;
         }
         if (shift > 0) {
-            T divisor;
-            if constexpr (std::is_same_v<T, vectorized::Int128I>) {
-                divisor = get_scale_multiplier<__int128>(shift);
-            } else {
-                divisor = get_scale_multiplier<T>(shift);
-            }
+            T divisor = get_scale_multiplier<T>(shift);
             if (LIKELY(divisor >= 0)) {
                 value /= divisor;
                 T remainder = value % divisor;
-                if ((remainder > 0 ? T(remainder) : T(-remainder)) >= (divisor >> 1)) {
+                if ((remainder > 0 ? remainder : -remainder) >= (divisor >> 1)) {
                     value += 1;
                 }
             } else {
@@ -773,14 +758,10 @@ inline T StringParser::string_to_decimal(const char* s, int len, int type_precis
     }
 
     if (type_scale > scale) {
-        if constexpr (std::is_same_v<T, vectorized::Int128I>) {
-            value *= get_scale_multiplier<__int128>(type_scale - scale);
-        } else {
-            value *= get_scale_multiplier<T>(type_scale - scale);
-        }
+        value *= get_scale_multiplier<T>(type_scale - scale);
     }
 
-    return is_negative ? T(-value) : T(value);
+    return is_negative ? -value : value;
 }
 
 } // end namespace doris

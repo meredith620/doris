@@ -85,7 +85,7 @@ bool init_glog(const char* basename) {
     }
 
     // set log buffer level
-    // default is 0
+    // defalut is 0
     std::string& logbuflevel = config::log_buffer_level;
     if (iequals(logbuflevel, "-1")) {
         FLAGS_logbuflevel = -1;

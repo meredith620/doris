@@ -28,11 +28,6 @@ public class NereidsException extends RuntimeException {
         this.exception = cause;
     }
 
-    public NereidsException(String message, Exception cause) {
-        super(message, cause);
-        this.exception = cause;
-    }
-
     public Exception getException() {
         return exception;
     }

@@ -38,16 +38,16 @@ public class SemiJoinSemiJoinTransposeProjectTest implements PatternMatchSupport
     @Test
     public void testSemiProjectSemiCommute() {
         /*
-         *     t1.name=t3.name              t1.id=t2.id
+         *     t1.name=t3.name               t1.id=t2.id
          *       topJoin                  newTopJoin
-         *       /     \                   /        \
-         *    project   t3        t1.name=t3.name    t2
-         *    t1.name       -->    newBottomJoin
-         *      |                     /    \
-         * t1.id=t2.id             t1      t3
-         * bottomJoin
-         *   /    \
-         * t1      t2
+         *       /     \                   /     \
+         *    project   t3           project     t2
+         *    t1.name            t1.name, t1.id
+         *      |                       |
+         * t1.id=t2.id            t1.name=t3.name
+         * bottomJoin       -->   newBottomJoin
+         *   /    \                   /    \
+         * t1      t2               t1      t3
          */
         LogicalPlan topJoin = new LogicalPlanBuilder(scan1)
                 .hashJoinUsing(scan2, JoinType.LEFT_ANTI_JOIN, Pair.of(0, 0))
@@ -60,10 +60,15 @@ public class SemiJoinSemiJoinTransposeProjectTest implements PatternMatchSupport
                 .matchesExploration(
                         logicalProject(
                                 logicalJoin(
+                                       logicalProject(
                                                logicalJoin(
                                                        logicalOlapScan().when(scan -> scan.getTable().getName().equals("t1")),
                                                        logicalOlapScan().when(scan -> scan.getTable().getName().equals("t3"))
-                                               ).when(join -> join.getJoinType() == JoinType.LEFT_SEMI_JOIN),
+                                               ).when(join -> join.getJoinType() == JoinType.LEFT_SEMI_JOIN)
+                                       ).when(project -> project.getProjects().size() == 2
+                                               && project.getProjects().get(0).getName().equals("id")
+                                               && project.getProjects().get(1).getName().equals("name")
+                                       ),
                                        logicalOlapScan().when(scan -> scan.getTable().getName().equals("t2"))
                                 ).when(join -> join.getJoinType() == JoinType.LEFT_ANTI_JOIN)
                         )

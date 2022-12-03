@@ -108,7 +108,10 @@ public class ColumnDef {
     private boolean visible;
 
     public ColumnDef(String name, TypeDef typeDef) {
-        this(name, typeDef, false, null, false, DefaultValue.NOT_SET, "");
+        this.name = name;
+        this.typeDef = typeDef;
+        this.comment = "";
+        this.defaultValue = DefaultValue.NOT_SET;
     }
 
     public ColumnDef(String name, TypeDef typeDef, boolean isKey, AggregateType aggregateType,
@@ -199,14 +202,14 @@ public class ColumnDef {
         }
         FeNameFormat.checkColumnName(name);
 
-        // When string type length is not assigned, it needs to be assigned to 1.
+        // When string type length is not assigned, it need to be assigned to 1.
         if (typeDef.getType().isScalarType()) {
             final ScalarType targetType = (ScalarType) typeDef.getType();
             if (targetType.getPrimitiveType().isStringType() && !targetType.isLengthSet()) {
                 if (targetType.getPrimitiveType() != PrimitiveType.STRING) {
                     targetType.setLength(1);
                 } else {
-                    // always set text length MAX_STRING_LENGTH
+                    // alway set text length MAX_STRING_LENGTH
                     targetType.setLength(ScalarType.MAX_STRING_LENGTH);
                 }
             }
@@ -424,9 +427,5 @@ public class ColumnDef {
     @Override
     public String toString() {
         return toSql();
-    }
-
-    public void setAllowNull(boolean allowNull) {
-        isAllowNull = allowNull;
     }
 }

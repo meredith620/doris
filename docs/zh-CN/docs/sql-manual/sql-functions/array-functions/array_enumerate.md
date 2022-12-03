@@ -1,6 +1,6 @@
 ---
 {
-    "title": "array_enumerate",
+    "title": "ARRAY_ENUMERATE 函数",
     "language": "zh-CN"
 }
 ---
@@ -24,7 +24,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-## array_enumerate
+## ARRAY_ENUMERATE 
+
+### Name
+
+ARRAY_ENUMERATE
 
 ### description
 

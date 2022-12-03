@@ -28,11 +28,7 @@ under the License.
 
 ### Name
 
-<version since="1.2">
-
 SHOW CATALOGS
-
-</version>
 
 ### Description
 
@@ -41,12 +37,8 @@ SHOW CATALOGS
 语法：
 
 ```sql
-SHOW CATALOGS [LIKE]
+SHOW CATALOGS
 ```
-
-说明:
-
-LIKE：可按照CATALOG名进行模糊查询
 
 返回结果说明：
 
@@ -60,24 +52,13 @@ LIKE：可按照CATALOG名进行模糊查询
 
    ```sql
    SHOW CATALOGS;
-    +-----------+-------------+----------+
-    | CatalogId | CatalogName | Type     |
-    +-----------+-------------+----------+
-    |     10024 | hive        | hms      |
-    |         0 | internal    | internal |
-    +-----------+-------------+----------+
-       ```
-   
-2. 按照目录名进行模糊搜索
-
-   ```sql
-   SHOW CATALOGS LIKE 'hi%';
-    +-----------+-------------+----------+
-    | CatalogId | CatalogName | Type     |
-    +-----------+-------------+----------+
-    |     10024 | hive        | hms      |
-    +-----------+-------------+----------+
-       ```
+	+-----------+-------------+----------+
+	| CatalogId | CatalogName | Type     |
+	+-----------+-------------+----------+
+	|     10024 | hive        | hms      |
+	|         0 | internal    | internal |
+	+-----------+-------------+----------+
+   	```
 
 ### Keywords
 

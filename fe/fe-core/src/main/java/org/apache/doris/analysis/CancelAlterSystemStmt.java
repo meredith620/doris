@@ -18,37 +18,36 @@
 package org.apache.doris.analysis;
 
 import org.apache.doris.common.AnalysisException;
-import org.apache.doris.common.Config;
+import org.apache.doris.common.Pair;
 import org.apache.doris.system.SystemInfoService;
-import org.apache.doris.system.SystemInfoService.HostInfo;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class CancelAlterSystemStmt extends CancelStmt {
 
     protected List<String> hostPorts;
-    private List<HostInfo> hostInfos;
+    private List<Pair<String, Integer>> hostPortPairs;
 
     public CancelAlterSystemStmt(List<String> hostPorts) {
         this.hostPorts = hostPorts;
-        this.hostInfos = Lists.newArrayList();
+        this.hostPortPairs = new LinkedList<Pair<String, Integer>>();
     }
 
-    public List<HostInfo> getHostInfos() {
-        return hostInfos;
+    public List<Pair<String, Integer>> getHostPortPairs() {
+        return hostPortPairs;
     }
 
     @Override
     public void analyze(Analyzer analyzer) throws AnalysisException {
         for (String hostPort : hostPorts) {
-            HostInfo hostInfo = SystemInfoService.getIpHostAndPort(hostPort,
-                    !Config.enable_fqdn_mode);
-            this.hostInfos.add(hostInfo);
+            Pair<String, Integer> pair = SystemInfoService.validateHostAndPort(hostPort);
+            this.hostPortPairs.add(pair);
         }
-        Preconditions.checkState(!this.hostInfos.isEmpty());
+
+        Preconditions.checkState(!this.hostPortPairs.isEmpty());
     }
 
     @Override

@@ -47,7 +47,6 @@ suite("load_three_step") {
         // check load state
         while (true) {
             def stateResult1 = sql "show load where Label = '${loadLabel1}'"
-            logger.info("load result is ${stateResult1}")
             def loadState1 = stateResult1[stateResult1.size() - 1][2].toString()
             if ("CANCELLED".equalsIgnoreCase(loadState1)) {
                 throw new IllegalStateException("load ${loadLabel1} failed.")
@@ -65,7 +64,6 @@ suite("load_three_step") {
 
                 while (true) {
                     def stateResult2 = sql "show load where Label = '${loadLabel2}'"
-                    logger.info("load result is ${stateResult2}")
                     def loadState2 = stateResult2[stateResult2.size() - 1][2].toString()
                     if ("CANCELLED".equalsIgnoreCase(loadState2)) {
                         throw new IllegalStateException("load ${loadLabel2} failed.")

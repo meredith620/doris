@@ -18,7 +18,6 @@
 #include "olap/task/engine_clone_task.h"
 
 #include <set>
-#include <system_error>
 
 #include "env/env.h"
 #include "gen_cpp/BackendService.h"
@@ -77,8 +76,6 @@ Status EngineCloneTask::_do_clone() {
     TabletSharedPtr tablet =
             StorageEngine::instance()->tablet_manager()->get_tablet(_clone_req.tablet_id);
     bool is_new_tablet = tablet == nullptr;
-    // try to incremental clone
-    std::vector<Version> missed_versions;
     // try to repair a tablet with missing version
     if (tablet != nullptr) {
         std::shared_lock migration_rlock(tablet->get_migration_lock(), std::try_to_lock);
@@ -90,6 +87,8 @@ Status EngineCloneTask::_do_clone() {
         auto local_data_path = fmt::format("{}/{}", tablet->tablet_path(), CLONE_PREFIX);
         bool allow_incremental_clone = false;
 
+        // try to incremental clone
+        std::vector<Version> missed_versions;
         tablet->calc_missed_versions(_clone_req.committed_version, &missed_versions);
 
         // if missed version size is 0, then it is useless to clone from remote be, it means local data is
@@ -110,7 +109,7 @@ Status EngineCloneTask::_do_clone() {
         // if tablet on src backend does not contains missing version, it will download all versions,
         // and set allow_incremental_clone to false
         RETURN_IF_ERROR(_make_and_download_snapshots(*(tablet->data_dir()), local_data_path,
-                                                     &src_host, &src_file_path, missed_versions,
+                                                     &src_host, &src_file_path, &missed_versions,
                                                      &allow_incremental_clone));
 
         RETURN_IF_ERROR(_finish_clone(tablet.get(), local_data_path, _clone_req.committed_version,
@@ -140,7 +139,7 @@ Status EngineCloneTask::_do_clone() {
 
         bool allow_incremental_clone = false;
         status = _make_and_download_snapshots(*store, tablet_dir, &src_host, &src_file_path,
-                                              missed_versions, &allow_incremental_clone);
+                                              nullptr, &allow_incremental_clone);
         if (!status.ok()) {
             return status;
         }
@@ -206,7 +205,7 @@ Status EngineCloneTask::_set_tablet_info(bool is_new_tablet) {
 Status EngineCloneTask::_make_and_download_snapshots(DataDir& data_dir,
                                                      const std::string& local_data_path,
                                                      TBackend* src_host, string* snapshot_path,
-                                                     const std::vector<Version>& missed_versions,
+                                                     const std::vector<Version>* missed_versions,
                                                      bool* allow_incremental_clone) {
     Status status = Status::OK();
 
@@ -229,15 +228,13 @@ Status EngineCloneTask::_make_and_download_snapshots(DataDir& data_dir,
                     .tag("port", src.be_port)
                     .tag("tablet", _clone_req.tablet_id)
                     .tag("snapshot_path", *snapshot_path)
-                    .tag("signature", _signature)
-                    .tag("missed_versions", missed_versions);
+                    .tag("signature", _signature);
         } else {
             LOG_WARNING("failed to make snapshot in remote BE")
                     .tag("host", src.host)
                     .tag("port", src.be_port)
                     .tag("tablet", _clone_req.tablet_id)
                     .tag("signature", _signature)
-                    .tag("missed_versions", missed_versions)
                     .error(status);
             continue;
         }
@@ -287,17 +284,19 @@ Status EngineCloneTask::_make_and_download_snapshots(DataDir& data_dir,
 
 Status EngineCloneTask::_make_snapshot(const std::string& ip, int port, TTableId tablet_id,
                                        TSchemaHash schema_hash, int timeout_s,
-                                       const std::vector<Version>& missed_versions,
+                                       const std::vector<Version>* missed_versions,
                                        std::string* snapshot_path, bool* allow_incremental_clone) {
     TSnapshotRequest request;
     request.__set_tablet_id(tablet_id);
     request.__set_schema_hash(schema_hash);
     request.__set_preferred_snapshot_version(g_Types_constants.TPREFER_SNAPSHOT_REQ_VERSION);
-    // TODO: missing version composed of singleton delta.
-    // if not, this place should be rewrote.
-    request.__isset.missing_version = (!missed_versions.empty());
-    for (auto& version : missed_versions) {
-        request.missing_version.push_back(version.first);
+    if (missed_versions != nullptr) {
+        // TODO: missing version composed of singleton delta.
+        // if not, this place should be rewrote.
+        request.__isset.missing_version = true;
+        for (auto& version : *missed_versions) {
+            request.missing_version.push_back(version.first);
+        }
     }
     if (timeout_s > 0) {
         request.__set_timeout(timeout_s);
@@ -414,14 +413,8 @@ Status EngineCloneTask::_download_files(DataDir* data_dir, const std::string& re
             client->set_timeout_ms(estimate_timeout * 1000);
             RETURN_IF_ERROR(client->download(local_file_path));
 
-            std::error_code ec;
             // Check file length
-            uint64_t local_file_size = std::filesystem::file_size(local_file_path, ec);
-            if (ec) {
-                LOG(WARNING) << "download file error" << ec.message();
-                return Status::IOError("can't retrive file_size of {}, due to {}", local_file_path,
-                                       ec.message());
-            }
+            uint64_t local_file_size = std::filesystem::file_size(local_file_path);
             if (local_file_size != file_size) {
                 LOG(WARNING) << "download file length error"
                              << ", remote_path=" << remote_file_url << ", file_size=" << file_size

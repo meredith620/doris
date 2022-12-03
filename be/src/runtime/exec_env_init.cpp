@@ -25,7 +25,6 @@
 #include "olap/segment_loader.h"
 #include "olap/storage_engine.h"
 #include "olap/storage_policy_mgr.h"
-#include "pipeline/task_scheduler.h"
 #include "runtime/broker_mgr.h"
 #include "runtime/bufferpool/buffer_pool.h"
 #include "runtime/cache/result_cache.h"
@@ -129,7 +128,6 @@ Status ExecEnv::_init(const std::vector<StorePath>& store_paths) {
 
     init_download_cache_required_components();
 
-    RETURN_IF_ERROR(init_pipeline_task_scheduler());
     _scanner_scheduler = new doris::vectorized::ScannerScheduler();
 
     _cgroups_mgr = new CgroupsMgr(this, config::doris_cgroups);
@@ -174,18 +172,6 @@ Status ExecEnv::_init(const std::vector<StorePath>& store_paths) {
     return Status::OK();
 }
 
-Status ExecEnv::init_pipeline_task_scheduler() {
-    auto executors_size = config::pipeline_executor_size;
-    if (executors_size <= 0) {
-        executors_size = CpuInfo::num_cores();
-    }
-    auto t_queue = std::make_shared<pipeline::TaskQueue>(executors_size);
-    auto b_scheduler = std::make_shared<pipeline::BlockedTaskScheduler>(t_queue);
-    _pipeline_task_scheduler = new pipeline::TaskScheduler(this, b_scheduler, t_queue);
-    RETURN_IF_ERROR(_pipeline_task_scheduler->start());
-    return Status::OK();
-}
-
 Status ExecEnv::_init_mem_env() {
     bool is_percent = false;
     std::stringstream ss;
@@ -193,7 +179,8 @@ Status ExecEnv::_init_mem_env() {
     _orphan_mem_tracker =
             std::make_shared<MemTrackerLimiter>(MemTrackerLimiter::Type::GLOBAL, "Orphan");
     _orphan_mem_tracker_raw = _orphan_mem_tracker.get();
-    thread_context()->thread_mem_tracker_mgr->init();
+    thread_context()->_thread_mem_tracker_mgr->init();
+    thread_context()->_thread_mem_tracker_mgr->set_check_attach(false);
 #if defined(USE_MEM_TRACKER) && !defined(__SANITIZE_ADDRESS__) && !defined(ADDRESS_SANITIZER) && \
         !defined(LEAK_SANITIZER) && !defined(THREAD_SANITIZER) && !defined(USE_JEMALLOC)
     if (doris::config::enable_tcmalloc_hook) {
@@ -288,6 +275,12 @@ Status ExecEnv::_init_mem_env() {
     int64_t chunk_reserved_bytes_limit =
             ParseUtil::parse_mem_spec(config::chunk_reserved_bytes_limit, MemInfo::mem_limit(),
                                       MemInfo::physical_mem(), &is_percent);
+    if (chunk_reserved_bytes_limit <= 0) {
+        ss << "Invalid config chunk_reserved_bytes_limit value, must be a percentage or "
+              "positive bytes value or percentage: "
+           << config::chunk_reserved_bytes_limit;
+        return Status::InternalError(ss.str());
+    }
     chunk_reserved_bytes_limit =
             BitUtil::RoundDown(chunk_reserved_bytes_limit, config::min_chunk_reserved_bytes);
     ChunkAllocator::init_instance(chunk_reserved_bytes_limit);
@@ -362,7 +355,6 @@ void ExecEnv::_destroy() {
     SAFE_DELETE(_load_path_mgr);
     SAFE_DELETE(_master_info);
     SAFE_DELETE(_fragment_mgr);
-    SAFE_DELETE(_pipeline_task_scheduler);
     SAFE_DELETE(_cgroups_mgr);
     SAFE_DELETE(_scan_thread_pool);
     SAFE_DELETE(_remote_scan_thread_pool);

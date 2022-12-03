@@ -26,21 +26,15 @@ import org.apache.doris.mysql.privilege.PrivPredicate;
 import org.apache.doris.qe.ConnectContext;
 
 public class DropFunctionStmt extends DdlStmt {
-    private final boolean ifExists;
     private final FunctionName functionName;
     private final FunctionArgsDef argsDef;
 
     // set after analyzed
     private FunctionSearchDesc function;
 
-    public DropFunctionStmt(boolean ifExists, FunctionName functionName, FunctionArgsDef argsDef) {
-        this.ifExists = ifExists;
+    public DropFunctionStmt(FunctionName functionName, FunctionArgsDef argsDef) {
         this.functionName = functionName;
         this.argsDef = argsDef;
-    }
-
-    public boolean isIfExists() {
-        return ifExists;
     }
 
     public FunctionName getFunctionName() {

@@ -27,6 +27,7 @@ import org.apache.doris.qe.StmtExecutor;
 import org.apache.doris.utframe.TestWithFeService;
 
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -79,7 +80,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor1.execute();
         Planner planner1 = stmtExecutor1.planner();
         String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan1, "UNION"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan1, "UNION"));
         String sql2 = "explain select * from db1.tbl1 where k1='a' and k4=1\n"
                 + "union distinct\n"
                 + "  (select * from db1.tbl1 where k1='b' and k4=2\n"
@@ -103,7 +104,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor2.execute();
         Planner planner2 = stmtExecutor2.planner();
         String plan2 = planner2.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(4, StringUtils.countMatches(plan2, "UNION"));
+        Assert.assertEquals(4, StringUtils.countMatches(plan2, "UNION"));
 
         // intersect
         String sql3 = "explain select * from\n"
@@ -118,7 +119,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor3.execute();
         Planner planner3 = stmtExecutor3.planner();
         String plan3 = planner3.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan3, "INTERSECT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan3, "INTERSECT"));
         String sql4 = "explain select * from db1.tbl1 where k1='a' and k4=1\n"
                 + "intersect distinct\n"
                 + "  (select * from db1.tbl1 where k1='b' and k4=2\n"
@@ -143,7 +144,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor4.execute();
         Planner planner4 = stmtExecutor4.planner();
         String plan4 = planner4.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(3, StringUtils.countMatches(plan4, "INTERSECT"));
+        Assert.assertEquals(3, StringUtils.countMatches(plan4, "INTERSECT"));
 
         // except
         String sql5 = "explain select * from\n"
@@ -158,7 +159,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor5.execute();
         Planner planner5 = stmtExecutor5.planner();
         String plan5 = planner5.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan5, "EXCEPT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan5, "EXCEPT"));
 
         String sql6 = "select * from db1.tbl1 where k1='a' and k4=1\n"
                 + "except\n"
@@ -172,7 +173,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor6.execute();
         Planner planner6 = stmtExecutor6.planner();
         String plan6 = planner6.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan6, "EXCEPT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan6, "EXCEPT"));
 
         String sql7 = "select * from db1.tbl1 where k1='a' and k4=1\n"
                 + "except distinct\n"
@@ -186,7 +187,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor7.execute();
         Planner planner7 = stmtExecutor7.planner();
         String plan7 = planner7.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan7, "EXCEPT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan7, "EXCEPT"));
 
         // mixed
         String sql8 = "select * from db1.tbl1 where k1='a' and k4=1\n"
@@ -201,9 +202,9 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor8.execute();
         Planner planner8 = stmtExecutor8.planner();
         String plan8 = planner8.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan8, "UNION"));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan8, "INTERSECT"));
-        Assertions.assertEquals(1, StringUtils.countMatches(plan8, "EXCEPT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan8, "UNION"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan8, "INTERSECT"));
+        Assert.assertEquals(1, StringUtils.countMatches(plan8, "EXCEPT"));
 
         String sql9 = "explain select * from db1.tbl1 where k1='a' and k4=1\n"
                 + "intersect distinct\n"
@@ -229,18 +230,18 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor9.execute();
         Planner planner9 = stmtExecutor9.planner();
         String plan9 = planner9.getExplainString(new ExplainOptions(false, false));
-        Assertions.assertEquals(2, StringUtils.countMatches(plan9, "UNION"));
-        Assertions.assertEquals(3, StringUtils.countMatches(plan9, "INTERSECT"));
-        Assertions.assertEquals(2, StringUtils.countMatches(plan9, "EXCEPT"));
+        Assert.assertEquals(2, StringUtils.countMatches(plan9, "UNION"));
+        Assert.assertEquals(3, StringUtils.countMatches(plan9, "INTERSECT"));
+        Assert.assertEquals(2, StringUtils.countMatches(plan9, "EXCEPT"));
 
         String sql10 = "select 499 union select 670 except select 499";
         StmtExecutor stmtExecutor10 = new StmtExecutor(connectContext, sql10);
         stmtExecutor10.execute();
         Planner planner10 = stmtExecutor10.planner();
         List<PlanFragment> fragments10 = planner10.getFragments();
-        Assertions.assertTrue(fragments10.get(0).getPlanRoot().getFragment()
+        Assert.assertTrue(fragments10.get(0).getPlanRoot().getFragment()
                 .getPlanRoot().getChild(0) instanceof AggregationNode);
-        Assertions.assertTrue(fragments10.get(0).getPlanRoot()
+        Assert.assertTrue(fragments10.get(0).getPlanRoot()
                 .getFragment().getPlanRoot().getChild(1) instanceof UnionNode);
 
         String sql11 = "SELECT a.x FROM\n"
@@ -251,7 +252,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor11.execute();
         Planner planner11 = stmtExecutor11.planner();
         SetOperationNode setNode11 = (SetOperationNode) (planner11.getFragments().get(1).getPlanRoot());
-        Assertions.assertEquals(2, setNode11.getMaterializedConstExprLists().size());
+        Assert.assertEquals(2, setNode11.getMaterializedConstExprLists().size());
 
         String sql12 = "SELECT a.x \n"
                 + "FROM (SELECT '01' x) a \n"
@@ -297,9 +298,9 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor1.execute();
         Planner planner1 = stmtExecutor1.planner();
         List<PlanFragment> fragments1 = planner1.getFragments();
-        Assertions.assertEquals("if",
+        Assert.assertEquals("if",
                 fragments1.get(0).getPlanRoot().conjuncts.get(0).getChild(0).getFn().functionName());
-        Assertions.assertEquals(3, fragments1.get(0).getPlanRoot().getChild(0).getChild(0).conjuncts.size());
+        Assert.assertEquals(3, fragments1.get(0).getPlanRoot().getChild(0).getChild(0).conjuncts.size());
 
         String sql2 =
                 "SELECT\n"
@@ -324,7 +325,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor2.execute();
         Planner planner2 = stmtExecutor2.planner();
         List<PlanFragment> fragments2 = planner2.getFragments();
-        Assertions.assertEquals(4, fragments2.get(0).getPlanRoot().getChild(0).conjuncts.size());
+        Assert.assertEquals(4, fragments2.get(0).getPlanRoot().getChild(0).conjuncts.size());
 
     }
 
@@ -339,7 +340,7 @@ public class PlannerTest extends TestWithFeService {
         stmtExecutor1.execute();
         Planner planner1 = stmtExecutor1.planner();
         String plan1 = planner1.getExplainString(new ExplainOptions(true, false));
-        Assertions.assertEquals(2, StringUtils.countMatches(plan1, "nullable=true"));
+        Assert.assertEquals(2, StringUtils.countMatches(plan1, "nullIndicatorBit=0"));
     }
 
     @Test
@@ -347,7 +348,7 @@ public class PlannerTest extends TestWithFeService {
         String sql = "select count(k1) from db1.tbl2";
         StmtExecutor stmtExecutor = new StmtExecutor(connectContext, sql);
         stmtExecutor.execute();
-        Assertions.assertNotNull(stmtExecutor.planner());
+        Assert.assertNotNull(stmtExecutor.planner());
     }
 
     @Test
@@ -359,13 +360,13 @@ public class PlannerTest extends TestWithFeService {
                 + "GROUP BY a.k1, a.k3";
         StmtExecutor stmtExecutor = new StmtExecutor(connectContext, sql);
         stmtExecutor.execute();
-        Assertions.assertNotNull(stmtExecutor.planner());
+        Assert.assertNotNull(stmtExecutor.planner());
         Planner planner = stmtExecutor.planner();
         List<PlanFragment> fragments = planner.getFragments();
-        Assertions.assertTrue(fragments.size() > 0);
+        Assert.assertTrue(fragments.size() > 0);
         PlanNode node = fragments.get(0).getPlanRoot().getChild(0);
-        Assertions.assertTrue(node.getChildren().size() > 0);
-        Assertions.assertTrue(node instanceof SortNode);
+        Assert.assertTrue(node.getChildren().size() > 0);
+        Assert.assertTrue(node instanceof SortNode);
         SortNode sortNode = (SortNode) node;
         List<Expr> tupleExprs = sortNode.resolvedTupleExprs;
         List<Expr> sortTupleExprs = sortNode.getSortInfo().getSortTupleSlotExprs();
@@ -399,7 +400,7 @@ public class PlannerTest extends TestWithFeService {
             Planner planner2 = stmtExecutor2.planner();
             String plan2 = planner2.getExplainString(new ExplainOptions(false, false));
 
-            Assertions.assertEquals(plan1, plan2);
+            Assert.assertEquals(plan1, plan2);
         };
 
         compare.accept("select * from db1.tbl2 where k1 = 2.0", "select * from db1.tbl2 where k1 = 2");
@@ -491,8 +492,8 @@ public class PlannerTest extends TestWithFeService {
         StmtExecutor stmtExecutor = new StmtExecutor(connectContext, qSQL);
         stmtExecutor.execute();
         QueryState state = connectContext.getState();
-        Assertions.assertEquals(MysqlStateType.ERR, state.getStateType());
-        Assertions.assertTrue(state.getErrorMessage()
+        Assert.assertEquals(MysqlStateType.ERR, state.getStateType());
+        Assert.assertTrue(state.getErrorMessage()
                 .contains("you need (at least one of) the LOAD privilege(s) for this operation"));
 
         // set to admin user
@@ -502,8 +503,8 @@ public class PlannerTest extends TestWithFeService {
         state = connectContext.getState();
         // still error because we can not do real update in unit test.
         // just check if it pass the priv check.
-        Assertions.assertEquals(MysqlStateType.ERR, state.getStateType());
-        Assertions.assertTrue(state.getErrorMessage().contains("failed to execute update stmt"));
+        Assert.assertEquals(MysqlStateType.ERR, state.getStateType());
+        Assert.assertTrue(state.getErrorMessage().contains("failed to execute update stmt"));
     }
 
     @Test
@@ -525,142 +526,5 @@ public class PlannerTest extends TestWithFeService {
         String plan2 = planner2.getExplainString(new ExplainOptions(false, false));
         Assertions.assertFalse(plan2.contains("SORT INFO:"));
         Assertions.assertFalse(plan2.contains("SORT LIMIT:"));
-    }
-
-    @Test
-    public void testEliminatingSortNode() throws Exception {
-            // fail case 1
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertTrue(plan1.contains("SORT LIMIT:"));
-            }
-
-            // fail case 2
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 and k3 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertTrue(plan1.contains("SORT LIMIT:"));
-            }
-
-            // fail case 3
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 and k2 != 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertTrue(plan1.contains("SORT LIMIT:"));
-            }
-
-            // fail case 4
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 or k2 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertTrue(plan1.contains("SORT LIMIT:"));
-            }
-
-            // fail case 5
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 and k2 = 2 or k3 = 3 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertTrue(plan1.contains("SORT LIMIT:"));
-            }
-
-            // fail case 6
-            // TODO, support: in (select 1)
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 in (select 1) and k2 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("order by:"));
-            }
-
-            // fail case 7
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 not in (1) and k2 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertTrue(plan1.contains("order by:"));
-            }
-
-            // success case 1
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 = 1 and k2 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertFalse(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertFalse(plan1.contains("SORT LIMIT:"));
-            }
-
-            // success case 2
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k3 = 3 and k2 = 2 and k1 = 1 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertFalse(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertFalse(plan1.contains("SORT LIMIT:"));
-            }
-
-            // success case 3
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 in (1) and k2 in (2) and k2 !=2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertFalse(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertFalse(plan1.contains("SORT LIMIT:"));
-            }
-
-            // success case 4
-            {
-            String sql1 = "explain select k1 from db1.tbl1 where k1 in (concat('1','2')) and k2 = 2 order by k1, k2";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertFalse(plan1.contains("SORT INFO:\n          `k1`\n          `k2`"));
-            Assertions.assertFalse(plan1.contains("SORT LIMIT:"));
-            }
-
-            // success case 5
-            {
-            String sql1 = "explain select tbl1.k1 from db1.tbl1 join db1.tbl2 on tbl1.k1 = tbl2.k1"
-                    + " where tbl1.k1 = 1 and tbl2.k1 = 2 and tbl1.k2 = 3 order by tbl1.k1, tbl2.k1";
-            StmtExecutor stmtExecutor1 = new StmtExecutor(connectContext, sql1);
-            stmtExecutor1.execute();
-            Planner planner1 = stmtExecutor1.planner();
-            String plan1 = planner1.getExplainString(new ExplainOptions(false, false));
-            Assertions.assertFalse(plan1.contains("SORT INFO:"));
-            Assertions.assertFalse(plan1.contains("SORT LIMIT:"));
-            }
-
-
     }
 }

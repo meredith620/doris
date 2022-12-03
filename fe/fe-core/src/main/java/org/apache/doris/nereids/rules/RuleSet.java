@@ -36,12 +36,9 @@ import org.apache.doris.nereids.rules.implementation.LogicalLimitToPhysicalLimit
 import org.apache.doris.nereids.rules.implementation.LogicalOlapScanToPhysicalOlapScan;
 import org.apache.doris.nereids.rules.implementation.LogicalOneRowRelationToPhysicalOneRowRelation;
 import org.apache.doris.nereids.rules.implementation.LogicalProjectToPhysicalProject;
-import org.apache.doris.nereids.rules.implementation.LogicalRepeatToPhysicalRepeat;
 import org.apache.doris.nereids.rules.implementation.LogicalSortToPhysicalQuickSort;
-import org.apache.doris.nereids.rules.implementation.LogicalTVFRelationToPhysicalTVFRelation;
 import org.apache.doris.nereids.rules.implementation.LogicalTopNToPhysicalTopN;
 import org.apache.doris.nereids.rules.rewrite.AggregateDisassemble;
-import org.apache.doris.nereids.rules.rewrite.DistinctAggregateDisassemble;
 import org.apache.doris.nereids.rules.rewrite.logical.EliminateOuterJoin;
 import org.apache.doris.nereids.rules.rewrite.logical.MergeFilters;
 import org.apache.doris.nereids.rules.rewrite.logical.MergeLimits;
@@ -50,7 +47,6 @@ import org.apache.doris.nereids.rules.rewrite.logical.PushdownExpressionsInHashC
 import org.apache.doris.nereids.rules.rewrite.logical.PushdownFilterThroughAggregation;
 import org.apache.doris.nereids.rules.rewrite.logical.PushdownFilterThroughJoin;
 import org.apache.doris.nereids.rules.rewrite.logical.PushdownFilterThroughProject;
-import org.apache.doris.nereids.rules.rewrite.logical.PushdownFilterThroughRepeat;
 import org.apache.doris.nereids.rules.rewrite.logical.PushdownJoinOtherCondition;
 import org.apache.doris.nereids.rules.rewrite.logical.PushdownProjectThroughLimit;
 
@@ -74,7 +70,6 @@ public class RuleSet {
             .add(SemiJoinSemiJoinTranspose.INSTANCE)
             .add(SemiJoinSemiJoinTransposeProject.INSTANCE)
             .add(new AggregateDisassemble())
-            .add(new DistinctAggregateDisassemble())
             .add(new PushdownFilterThroughProject())
             .add(new MergeProjects())
             .build();
@@ -85,7 +80,6 @@ public class RuleSet {
             new PushdownFilterThroughJoin(),
             new PushdownExpressionsInHashCondition(),
             new PushdownFilterThroughAggregation(),
-            new PushdownFilterThroughRepeat(),
             new PushdownProjectThroughLimit(),
             new EliminateOuterJoin(),
             new MergeProjects(),
@@ -94,7 +88,6 @@ public class RuleSet {
 
     public static final List<Rule> IMPLEMENTATION_RULES = planRuleFactories()
             .add(new LogicalAggToPhysicalHashAgg())
-            .add(new LogicalRepeatToPhysicalRepeat())
             .add(new LogicalFilterToPhysicalFilter())
             .add(new LogicalJoinToHashJoin())
             .add(new LogicalJoinToNestedLoopJoin())
@@ -106,7 +99,6 @@ public class RuleSet {
             .add(new LogicalAssertNumRowsToPhysicalAssertNumRows())
             .add(new LogicalOneRowRelationToPhysicalOneRowRelation())
             .add(new LogicalEmptyRelationToPhysicalEmptyRelation())
-            .add(new LogicalTVFRelationToPhysicalTVFRelation())
             .build();
 
     public static final List<Rule> LEFT_DEEP_TREE_JOIN_REORDER = planRuleFactories()

@@ -299,7 +299,7 @@ public class AggregationNode extends PlanNode {
 
         if (detailLevel == TExplainLevel.BRIEF) {
             output.append(detailPrefix).append(String.format(
-                    "cardinality=%,d",  cardinality)).append("\n");
+                    "cardinality=%s", cardinality)).append("\n");
             return output.toString();
         }
 
@@ -315,7 +315,7 @@ public class AggregationNode extends PlanNode {
             output.append(detailPrefix).append("having: ").append(getExplainString(conjuncts)).append("\n");
         }
         output.append(detailPrefix).append(String.format(
-                "cardinality=%,d", cardinality)).append("\n");
+                "cardinality=%s", cardinality)).append("\n");
         return output.toString();
     }
 

@@ -53,7 +53,7 @@ Status VMysqlTableSink::open(RuntimeState* state) {
     return Status::OK();
 }
 
-Status VMysqlTableSink::send(RuntimeState* state, Block* block, bool eos) {
+Status VMysqlTableSink::send(RuntimeState* state, Block* block) {
     INIT_AND_SCOPE_SEND_SPAN(state->get_tracer(), _send_span, "VMysqlTableSink::send");
     return _writer->append(block);
 }

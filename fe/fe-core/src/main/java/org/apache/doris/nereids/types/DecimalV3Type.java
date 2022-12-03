@@ -64,6 +64,8 @@ public class DecimalV3Type extends FractionalType {
             .put(DoubleType.INSTANCE, DOUBLE_DECIMAL)
             .build();
 
+    private static final int WIDTH = 16;
+
     private final int precision;
     private final int scale;
 
@@ -178,13 +180,7 @@ public class DecimalV3Type extends FractionalType {
 
     @Override
     public int width() {
-        if (precision <= MAX_DECIMAL32_PRECISION) {
-            return 4;
-        } else if (precision <= MAX_DECIMAL64_PRECISION) {
-            return 8;
-        } else {
-            return 16;
-        }
+        return WIDTH;
     }
 
 }

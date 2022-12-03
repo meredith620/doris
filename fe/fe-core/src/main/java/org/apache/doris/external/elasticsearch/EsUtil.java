@@ -37,6 +37,7 @@ import org.apache.doris.analysis.RangePartitionDesc;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.catalog.ArrayType;
 import org.apache.doris.catalog.Column;
+import org.apache.doris.catalog.Env;
 import org.apache.doris.catalog.ScalarType;
 import org.apache.doris.catalog.Type;
 import org.apache.doris.common.AnalysisException;
@@ -50,7 +51,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -193,13 +193,12 @@ public class EsUtil {
         return properties;
     }
 
-    private static QueryBuilder toCompoundEsDsl(Expr expr, List<Expr> notPushDownList,
-            Map<String, String> fieldsContext) {
+    private static QueryBuilder toCompoundEsDsl(Expr expr, List<Expr> notPushDownList) {
         CompoundPredicate compoundPredicate = (CompoundPredicate) expr;
         switch (compoundPredicate.getOp()) {
             case AND: {
-                QueryBuilder left = toEsDsl(compoundPredicate.getChild(0), notPushDownList, fieldsContext);
-                QueryBuilder right = toEsDsl(compoundPredicate.getChild(1), notPushDownList, fieldsContext);
+                QueryBuilder left = toEsDsl(compoundPredicate.getChild(0), notPushDownList);
+                QueryBuilder right = toEsDsl(compoundPredicate.getChild(1), notPushDownList);
                 if (left != null && right != null) {
                     return QueryBuilders.boolQuery().must(left).must(right);
                 }
@@ -207,8 +206,8 @@ public class EsUtil {
             }
             case OR: {
                 int beforeSize = notPushDownList.size();
-                QueryBuilder left = toEsDsl(compoundPredicate.getChild(0), notPushDownList, fieldsContext);
-                QueryBuilder right = toEsDsl(compoundPredicate.getChild(1), notPushDownList, fieldsContext);
+                QueryBuilder left = toEsDsl(compoundPredicate.getChild(0), notPushDownList);
+                QueryBuilder right = toEsDsl(compoundPredicate.getChild(1), notPushDownList);
                 int afterSize = notPushDownList.size();
                 if (left != null && right != null) {
                     return QueryBuilders.boolQuery().should(left).should(right);
@@ -226,7 +225,7 @@ public class EsUtil {
                 return null;
             }
             case NOT: {
-                QueryBuilder child = toEsDsl(compoundPredicate.getChild(0), notPushDownList, fieldsContext);
+                QueryBuilder child = toEsDsl(compoundPredicate.getChild(0), notPushDownList);
                 if (child != null) {
                     return QueryBuilders.boolQuery().mustNot(child);
                 }
@@ -245,19 +244,19 @@ public class EsUtil {
     }
 
     public static QueryBuilder toEsDsl(Expr expr) {
-        return toEsDsl(expr, new ArrayList<>(), new HashMap<>());
+        return toEsDsl(expr, new ArrayList<>());
     }
 
     /**
      * Doris expr to es dsl.
      **/
-    public static QueryBuilder toEsDsl(Expr expr, List<Expr> notPushDownList, Map<String, String> fieldsContext) {
+    public static QueryBuilder toEsDsl(Expr expr, List<Expr> notPushDownList) {
         if (expr == null) {
             return null;
         }
         // CompoundPredicate, `between` also converted to CompoundPredicate.
         if (expr instanceof CompoundPredicate) {
-            return toCompoundEsDsl(expr, notPushDownList, fieldsContext);
+            return toCompoundEsDsl(expr, notPushDownList);
         }
         TExprOpcode opCode = expr.getOpcode();
         String column;
@@ -273,14 +272,9 @@ public class EsUtil {
                 notPushDownList.add(expr);
                 return null;
             }
-        } else if (leftExpr instanceof SlotRef) {
-            column = ((SlotRef) leftExpr).getColumnName();
         } else {
-            notPushDownList.add(expr);
-            return null;
+            column = ((SlotRef) leftExpr).getColumnName();
         }
-        // Replace col with col.keyword if mapping exist.
-        column = fieldsContext.getOrDefault(column, column);
         if (expr instanceof BinaryPredicate) {
             Object value = toDorisLiteral(expr.getChild(1));
             switch (opCode) {
@@ -377,7 +371,7 @@ public class EsUtil {
             column.setName(key);
             column.setIsKey(true);
             column.setIsAllowNull(true);
-            column.setUniqueId(-1);
+            column.setUniqueId((int) Env.getCurrentEnv().getNextId());
             if (arrayFields.contains(key)) {
                 column.setType(ArrayType.create(type, true));
             } else {
@@ -450,4 +444,3 @@ public class EsUtil {
     }
 
 }
-

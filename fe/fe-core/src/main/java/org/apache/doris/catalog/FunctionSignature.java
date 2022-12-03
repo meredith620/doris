@@ -19,7 +19,6 @@ package org.apache.doris.catalog;
 
 import org.apache.doris.nereids.trees.expressions.Expression;
 import org.apache.doris.nereids.types.DataType;
-import org.apache.doris.nereids.types.coercion.AbstractDataType;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -33,10 +32,10 @@ import java.util.function.BiFunction;
 public class FunctionSignature {
     public final DataType returnType;
     public final boolean hasVarArgs;
-    public final List<AbstractDataType> argumentsTypes;
+    public final List<DataType> argumentsTypes;
     public final int arity;
 
-    public FunctionSignature(DataType returnType, boolean hasVarArgs, List<AbstractDataType> argumentsTypes) {
+    public FunctionSignature(DataType returnType, boolean hasVarArgs, List<DataType> argumentsTypes) {
         this.returnType = Objects.requireNonNull(returnType, "returnType is not null");
         this.argumentsTypes = ImmutableList.copyOf(
                 Objects.requireNonNull(argumentsTypes, "argumentsTypes is not null"));
@@ -44,11 +43,11 @@ public class FunctionSignature {
         this.arity = argumentsTypes.size();
     }
 
-    public Optional<AbstractDataType> getVarArgType() {
+    public Optional<DataType> getVarArgType() {
         return hasVarArgs ? Optional.of(argumentsTypes.get(arity - 1)) : Optional.empty();
     }
 
-    public AbstractDataType getArgType(int index) {
+    public DataType getArgType(int index) {
         if (hasVarArgs && index >= arity) {
             return argumentsTypes.get(arity - 1);
         }
@@ -59,7 +58,7 @@ public class FunctionSignature {
         return new FunctionSignature(returnType, hasVarArgs, argumentsTypes);
     }
 
-    public FunctionSignature withArgumentTypes(boolean hasVarArgs, List<AbstractDataType> argumentsTypes) {
+    public FunctionSignature withArgumentTypes(boolean hasVarArgs, List<DataType> argumentsTypes) {
         return new FunctionSignature(returnType, hasVarArgs, argumentsTypes);
     }
 
@@ -70,27 +69,27 @@ public class FunctionSignature {
      * @return
      */
     public FunctionSignature withArgumentTypes(List<Expression> arguments,
-            BiFunction<AbstractDataType, Expression, AbstractDataType> transform) {
-        List<AbstractDataType> newTypes = Lists.newArrayList();
+            BiFunction<DataType, Expression, DataType> transform) {
+        List<DataType> newTypes = Lists.newArrayList();
         for (int i = 0; i < arguments.size(); i++) {
             newTypes.add(transform.apply(getArgType(i), arguments.get(i)));
         }
         return withArgumentTypes(hasVarArgs, newTypes);
     }
 
-    public static FunctionSignature of(DataType returnType, List<AbstractDataType> argumentsTypes) {
+    public static FunctionSignature of(DataType returnType, List<DataType> argumentsTypes) {
         return of(returnType, false, argumentsTypes);
     }
 
-    public static FunctionSignature of(DataType returnType, boolean hasVarArgs, List<AbstractDataType> argumentsTypes) {
+    public static FunctionSignature of(DataType returnType, boolean hasVarArgs, List<DataType> argumentsTypes) {
         return new FunctionSignature(returnType, hasVarArgs, argumentsTypes);
     }
 
-    public static FunctionSignature of(DataType returnType, AbstractDataType... argumentsTypes) {
+    public static FunctionSignature of(DataType returnType, DataType... argumentsTypes) {
         return of(returnType, false, argumentsTypes);
     }
 
-    public static FunctionSignature of(DataType returnType, boolean hasVarArgs, AbstractDataType... argumentsTypes) {
+    public static FunctionSignature of(DataType returnType, boolean hasVarArgs, DataType... argumentsTypes) {
         return new FunctionSignature(returnType, hasVarArgs, Arrays.asList(argumentsTypes));
     }
 
@@ -105,11 +104,11 @@ public class FunctionSignature {
             this.returnType = returnType;
         }
 
-        public FunctionSignature args(AbstractDataType...argTypes) {
+        public FunctionSignature args(DataType...argTypes) {
             return FunctionSignature.of(returnType, false, argTypes);
         }
 
-        public FunctionSignature varArgs(AbstractDataType...argTypes) {
+        public FunctionSignature varArgs(DataType...argTypes) {
             return FunctionSignature.of(returnType, true, argTypes);
         }
     }

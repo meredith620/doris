@@ -17,8 +17,6 @@
 
 #include "scanner_context.h"
 
-#include <mutex>
-
 #include "common/config.h"
 #include "runtime/runtime_state.h"
 #include "util/threadpool.h"
@@ -98,20 +96,14 @@ void ScannerContext::return_free_block(vectorized::Block* block) {
 
 void ScannerContext::append_blocks_to_queue(const std::vector<vectorized::Block*>& blocks) {
     std::lock_guard<std::mutex> l(_transfer_lock);
-    _blocks_queue.insert(_blocks_queue.end(), blocks.begin(), blocks.end());
-    _update_block_queue_empty();
+    blocks_queue.insert(blocks_queue.end(), blocks.begin(), blocks.end());
     for (auto b : blocks) {
         _cur_bytes_in_queue += b->allocated_bytes();
     }
     _blocks_queue_added_cv.notify_one();
 }
 
-bool ScannerContext::empty_in_queue() {
-    std::unique_lock<std::mutex> l(_transfer_lock);
-    return _blocks_queue.empty();
-}
-
-Status ScannerContext::get_block_from_queue(vectorized::Block** block, bool* eos, bool wait) {
+Status ScannerContext::get_block_from_queue(vectorized::Block** block, bool* eos) {
     std::unique_lock<std::mutex> l(_transfer_lock);
     // Normally, the scanner scheduler will schedule ctx.
     // But when the amount of data in the blocks queue exceeds the upper limit,
@@ -127,7 +119,7 @@ Status ScannerContext::get_block_from_queue(vectorized::Block** block, bool* eos
     {
         SCOPED_TIMER(_parent->_scanner_wait_batch_timer);
         _blocks_queue_added_cv.wait(l, [this]() {
-            return !_blocks_queue.empty() || _is_finished || !_process_status.ok() ||
+            return !blocks_queue.empty() || _is_finished || !_process_status.ok() ||
                    _state->is_cancelled();
         });
     }
@@ -140,10 +132,9 @@ Status ScannerContext::get_block_from_queue(vectorized::Block** block, bool* eos
         return _process_status;
     }
 
-    if (!_blocks_queue.empty()) {
-        *block = _blocks_queue.front();
-        _blocks_queue.pop_front();
-        _update_block_queue_empty();
+    if (!blocks_queue.empty()) {
+        *block = blocks_queue.front();
+        blocks_queue.pop_front();
         _cur_bytes_in_queue -= (*block)->allocated_bytes();
         return Status::OK();
     } else {
@@ -156,7 +147,6 @@ bool ScannerContext::set_status_on_error(const Status& status) {
     std::lock_guard<std::mutex> l(_transfer_lock);
     if (_process_status.ok()) {
         _process_status = status;
-        _status_error = true;
         _blocks_queue_added_cv.notify_one();
         return true;
     }
@@ -193,7 +183,7 @@ void ScannerContext::clear_and_join() {
     COUNTER_SET(_parent->_scanner_sched_counter, _num_scanner_scheduling);
     COUNTER_SET(_parent->_scanner_ctx_sched_counter, _num_ctx_scheduling);
 
-    std::for_each(_blocks_queue.begin(), _blocks_queue.end(),
+    std::for_each(blocks_queue.begin(), blocks_queue.end(),
                   std::default_delete<vectorized::Block>());
     std::for_each(_free_blocks.begin(), _free_blocks.end(),
                   std::default_delete<vectorized::Block>());
@@ -201,18 +191,13 @@ void ScannerContext::clear_and_join() {
     return;
 }
 
-bool ScannerContext::can_finish() {
-    std::unique_lock<std::mutex> l(_transfer_lock);
-    return _num_running_scanners == 0 && _num_scheduling_ctx == 0;
-}
-
 std::string ScannerContext::debug_string() {
     return fmt::format(
             "id: {}, sacnners: {}, blocks in queue: {},"
             " status: {}, _should_stop: {}, _is_finished: {}, free blocks: {},"
             " limit: {}, _num_running_scanners: {}, _num_scheduling_ctx: {}, _max_thread_num: {},"
-            " _block_per_scanner: {}, _cur_bytes_in_queue: {}, MAX_BYTE_OF_QUEUE: {}",
-            ctx_id, _scanners.size(), _blocks_queue.size(), _process_status.ok(), _should_stop,
+            " _block_per_scanner: {}, _cur_bytes_in_queue: {}, _max_bytes_in_queue: {}",
+            ctx_id, _scanners.size(), blocks_queue.size(), _process_status.ok(), _should_stop,
             _is_finished, _free_blocks.size(), limit, _num_running_scanners, _num_scheduling_ctx,
             _max_thread_num, _block_per_scanner, _cur_bytes_in_queue, _max_bytes_in_queue);
 }

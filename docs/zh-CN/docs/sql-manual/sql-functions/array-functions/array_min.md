@@ -1,6 +1,6 @@
 ---
 {
-    "title": "array_min",
+    "title": "ARRAY_MIN 函数",
     "language": "zh-CN"
 }
 ---
@@ -24,7 +24,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-## array_min
+## ARRAY_MIN
+
+### Name
+
+ARRAY_MIN
 
 ### description
 

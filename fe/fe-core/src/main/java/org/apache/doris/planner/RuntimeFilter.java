@@ -19,7 +19,6 @@ package org.apache.doris.planner;
 
 import org.apache.doris.analysis.Analyzer;
 import org.apache.doris.analysis.BinaryPredicate;
-import org.apache.doris.analysis.BitmapFilterPredicate;
 import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.Predicate;
 import org.apache.doris.analysis.SlotId;
@@ -63,7 +62,7 @@ public final class RuntimeFilter {
     // Identifier of the filter (unique within a query)
     private final RuntimeFilterId id;
     // Join node that builds the filter
-    private final PlanNode builderNode;
+    private final HashJoinNode builderNode;
     // Expr (rhs of join predicate) on which the filter is built
     private final Expr srcExpr;
     // The position of expr in the join condition
@@ -99,8 +98,6 @@ public final class RuntimeFilter {
     // The type of filter to build.
     private TRuntimeFilterType runtimeFilterType;
 
-    private boolean bitmapFilterNotIn = false;
-
     /**
      * Internal representation of a runtime filter target.
      */
@@ -132,7 +129,7 @@ public final class RuntimeFilter {
         }
     }
 
-    private RuntimeFilter(RuntimeFilterId filterId, PlanNode filterSrcNode, Expr srcExpr, int exprOrder,
+    private RuntimeFilter(RuntimeFilterId filterId, HashJoinNode filterSrcNode, Expr srcExpr, int exprOrder,
                           Expr origTargetExpr, Map<TupleId, List<SlotId>> targetSlots,
                           TRuntimeFilterType type, RuntimeFilterGenerator.FilterSizeLimits filterSizeLimits) {
         this.id = filterId;
@@ -174,10 +171,6 @@ public final class RuntimeFilter {
         return finalized;
     }
 
-    public void setBitmapFilterNotIn(boolean bitmapFilterNotIn) {
-        this.bitmapFilterNotIn = bitmapFilterNotIn;
-    }
-
     /**
      * Serializes a runtime filter to Thrift.
      */
@@ -194,10 +187,6 @@ public final class RuntimeFilter {
         }
         tFilter.setType(runtimeFilterType);
         tFilter.setBloomFilterSizeBytes(filterSizeBytes);
-        if (runtimeFilterType.equals(TRuntimeFilterType.BITMAP)) {
-            tFilter.setBitmapTargetExpr(targets.get(0).expr.treeToThrift());
-            tFilter.setBitmapFilterNotIn(bitmapFilterNotIn);
-        }
         return tFilter;
     }
 
@@ -237,7 +226,7 @@ public final class RuntimeFilter {
         return hasRemoteTargets;
     }
 
-    public PlanNode getBuilderNode() {
+    public HashJoinNode getBuilderNode() {
         return builderNode;
     }
 
@@ -290,7 +279,7 @@ public final class RuntimeFilter {
         if (LOG.isTraceEnabled()) {
             LOG.trace("Generating runtime filter from predicate " + joinPredicate);
         }
-        if (ConnectContext.get().getSessionVariable().isEnableRuntimeFilterPrune()) {
+        if (ConnectContext.get().getSessionVariable().enableRemoveNoConjunctsRuntimeFilterPolicy) {
             if (srcExpr instanceof SlotRef) {
                 if (!tupleHasConjuncts.contains(((SlotRef) srcExpr).getDesc().getParent().getId())) {
                     // src tuple has no conjunct, don't create runtime filter
@@ -306,44 +295,6 @@ public final class RuntimeFilter {
 
         return new RuntimeFilter(idGen.getNextId(), filterSrcNode, srcExpr, exprOrder,
                 targetExpr, targetSlots, type, filterSizeLimits);
-    }
-
-    public static RuntimeFilter create(IdGenerator<RuntimeFilterId> idGen, Analyzer analyzer, Expr joinPredicate,
-            int exprOrder, NestedLoopJoinNode filterSrcNode, TRuntimeFilterType type,
-            RuntimeFilterGenerator.FilterSizeLimits filterSizeLimits) {
-        Preconditions.checkNotNull(idGen);
-        Preconditions.checkNotNull(joinPredicate);
-        Preconditions.checkNotNull(filterSrcNode);
-
-        if (type.equals(TRuntimeFilterType.BITMAP)) {
-            if (!(joinPredicate instanceof BitmapFilterPredicate)) {
-                return null;
-            }
-
-            Expr targetExpr = Expr.getFirstBoundChild(joinPredicate, filterSrcNode.getChild(0).getTupleIds());
-            Expr srcExpr = Expr.getFirstBoundChild(joinPredicate, filterSrcNode.getChild(1).getTupleIds());
-            if (targetExpr == null || srcExpr == null) {
-                return null;
-            }
-
-            Type srcType = srcExpr.getType();
-            if (!srcType.equals(ScalarType.BITMAP)) {
-                return null;
-            }
-
-            Map<TupleId, List<SlotId>> targetSlots = getTargetSlots(analyzer, targetExpr);
-            Preconditions.checkNotNull(targetSlots);
-            if (targetSlots.isEmpty()) {
-                return null;
-            }
-
-            RuntimeFilter runtimeFilter =
-                    new RuntimeFilter(idGen.getNextId(), filterSrcNode, srcExpr, exprOrder, targetExpr, targetSlots,
-                            type, filterSizeLimits);
-            runtimeFilter.setBitmapFilterNotIn(((BitmapFilterPredicate) joinPredicate).isNotIn());
-            return runtimeFilter;
-        }
-        return null;
     }
 
     /**
@@ -576,12 +527,7 @@ public final class RuntimeFilter {
     }
 
     public void registerToPlan(Analyzer analyzer) {
-        PlanNode node = getBuilderNode();
-        if (node instanceof HashJoinNode) {
-            setIsBroadcast(((HashJoinNode) node).getDistributionMode() == HashJoinNode.DistributionMode.BROADCAST);
-        } else {
-            setIsBroadcast(false);
-        }
+        setIsBroadcast(getBuilderNode().getDistributionMode() == HashJoinNode.DistributionMode.BROADCAST);
         if (LOG.isTraceEnabled()) {
             LOG.trace("Runtime filter: " + debugString());
         }

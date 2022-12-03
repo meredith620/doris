@@ -19,7 +19,6 @@ package org.apache.doris.mtmv.metadata;
 
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
-import org.apache.doris.mtmv.MTMVUtils;
 import org.apache.doris.mtmv.MTMVUtils.JobState;
 import org.apache.doris.persist.gson.GsonUtils;
 
@@ -51,7 +50,7 @@ public class ChangeMTMVJob implements Writable {
     public ChangeMTMVJob(long jobId, JobState toStatus) {
         this.jobId = jobId;
         this.toStatus = toStatus;
-        this.lastModifyTime = MTMVUtils.getNowTimeStamp();
+        this.lastModifyTime = System.currentTimeMillis();
     }
 
     public long getJobId() {

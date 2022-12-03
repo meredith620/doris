@@ -18,6 +18,7 @@
 package org.apache.doris.statistics;
 
 import org.apache.doris.analysis.Expr;
+import org.apache.doris.common.Id;
 import org.apache.doris.common.UserException;
 
 import com.google.common.base.Preconditions;
@@ -27,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -56,7 +58,7 @@ public class BaseStatsDerive {
     }
 
     public StatsDeriveResult deriveStats() {
-        return new StatsDeriveResult(deriveRowCount());
+        return new StatsDeriveResult(deriveRowCount(), deriveColumnToDataSize(), deriveColumnToNdv());
     }
 
     public boolean hasLimit() {
@@ -149,4 +151,20 @@ public class BaseStatsDerive {
         return rowCount;
     }
 
+
+    protected HashMap<Id, Float> deriveColumnToDataSize() {
+        HashMap<Id, Float> columnToDataSize = new HashMap<>();
+        for (StatsDeriveResult child : childrenStatsResult) {
+            columnToDataSize.putAll(child.getColumnIdToDataSize());
+        }
+        return columnToDataSize;
+    }
+
+    protected HashMap<Id, Long> deriveColumnToNdv() {
+        HashMap<Id, Long> columnToNdv = new HashMap<>();
+        for (StatsDeriveResult child : childrenStatsResult) {
+            columnToNdv.putAll(child.getColumnIdToNdv());
+        }
+        return columnToNdv;
+    }
 }

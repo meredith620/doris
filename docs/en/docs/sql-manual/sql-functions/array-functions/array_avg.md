@@ -1,6 +1,6 @@
 ---
 {
-    "title": "array_avg",
+    "title": "ARRAY_AVG Function",
     "language": "en"
 }
 ---
@@ -24,7 +24,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-## array_avg
+## ARRAY_AVG
+
+### Name
+
+ARRAY_AVG
 
 ### description
 

@@ -28,6 +28,7 @@ namespace doris {
 
 namespace vectorized {
 class ColumnString;
+class ColumnJsonb;
 } // namespace vectorized
 
 class DateTimeValue;
@@ -51,7 +52,7 @@ constexpr bool is_enumeration_type(PrimitiveType type) {
     case TYPE_DECIMALV2:
     case TYPE_DECIMAL32:
     case TYPE_DECIMAL64:
-    case TYPE_DECIMAL128I:
+    case TYPE_DECIMAL128:
     case TYPE_BOOLEAN:
     case TYPE_ARRAY:
     case TYPE_HLL:
@@ -196,9 +197,9 @@ struct PrimitiveTypeTraits<TYPE_DECIMAL64> {
     using ColumnType = vectorized::ColumnDecimal<vectorized::Decimal64>;
 };
 template <>
-struct PrimitiveTypeTraits<TYPE_DECIMAL128I> {
+struct PrimitiveTypeTraits<TYPE_DECIMAL128> {
     using CppType = __int128_t;
-    using ColumnType = vectorized::ColumnDecimal<vectorized::Decimal128I>;
+    using ColumnType = vectorized::ColumnDecimal<vectorized::Decimal128>;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_LARGEINT> {
@@ -231,7 +232,7 @@ struct PrimitiveTypeTraits<TYPE_HLL> {
 template <>
 struct PrimitiveTypeTraits<TYPE_JSONB> {
     using CppType = JsonBinaryValue;
-    using ColumnType = vectorized::ColumnString;
+    using ColumnType = vectorized::ColumnJsonb;
 };
 
 // only for adapt get_predicate_column_ptr

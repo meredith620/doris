@@ -28,7 +28,6 @@
 #include "io/fs/file_reader.h"
 #include "olap/block_column_predicate.h"
 #include "olap/column_predicate.h"
-#include "olap/iterators.h"
 #include "olap/rowset/segment_v2/bitmap_index_reader.h" // for BitmapIndexReader
 #include "olap/rowset/segment_v2/common.h"
 #include "olap/rowset/segment_v2/ordinal_page_index.h" // for OrdinalPageIndexIterator
@@ -76,7 +75,6 @@ struct ColumnIteratorOptions {
     // page types are divided into DATA_PAGE & INDEX_PAGE
     // INDEX_PAGE including index_page, dict_page and short_key_page
     PageTypePB type;
-    IOContext io_ctx;
 
     void sanity_check() const {
         CHECK_NOTNULL(file_reader);
@@ -154,8 +152,6 @@ public:
 
     DictEncodingType get_dict_encoding_type() { return _dict_encoding_type; }
 
-    void disable_index_meta_cache() { _index_meta_use_page_cache = false; }
-
 private:
     ColumnReader(const ColumnReaderOptions& opts, const ColumnMetaPB& meta, uint64_t num_rows,
                  io::FileReaderSPtr file_reader);
@@ -165,7 +161,7 @@ private:
     // May be called multiple times, subsequent calls will no op.
     Status _ensure_index_loaded() {
         return _load_index_once.call([this] {
-            bool use_page_cache = !config::disable_storage_page_cache && _index_meta_use_page_cache;
+            bool use_page_cache = !config::disable_storage_page_cache;
             RETURN_IF_ERROR(_load_zone_map_index(use_page_cache, _opts.kept_in_memory));
             RETURN_IF_ERROR(_load_ordinal_index(use_page_cache, _opts.kept_in_memory));
             RETURN_IF_ERROR(_load_bitmap_index(use_page_cache, _opts.kept_in_memory));
@@ -207,7 +203,6 @@ private:
             nullptr; // initialized in init(), used for create PageDecoder
 
     // meta for various column indexes (null if the index is absent)
-    bool _index_meta_use_page_cache = true;
     const ZoneMapIndexPB* _zone_map_index_meta = nullptr;
     const OrdinalIndexPB* _ordinal_index_meta = nullptr;
     const BitmapIndexPB* _bitmap_index_meta = nullptr;

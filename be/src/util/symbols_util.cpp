@@ -176,7 +176,7 @@ static void append_any_val_type(int namespace_id, const TypeDescriptor& type,
     case TYPE_DECIMAL64:
         append_mangled_token("Decimal64Val", s);
         break;
-    case TYPE_DECIMAL128I:
+    case TYPE_DECIMAL128:
         append_mangled_token("Decimal128Val", s);
         break;
     default:

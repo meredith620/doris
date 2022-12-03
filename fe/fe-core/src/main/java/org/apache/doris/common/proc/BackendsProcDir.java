@@ -119,11 +119,7 @@ public class BackendsProcDir implements ProcDirInterface {
             backendInfo.add(backend.getOwnerClusterName());
             backendInfo.add(backend.getHost());
             if (Strings.isNullOrEmpty(clusterName)) {
-                if (backend.getHostName() != null) {
-                    backendInfo.add(backend.getHostName());
-                } else {
-                    backendInfo.add(NetUtils.getHostnameByIp(backend.getHost()));
-                }
+                backendInfo.add(NetUtils.getHostnameByIp(backend.getHost()));
                 backendInfo.add(String.valueOf(backend.getHeartbeatPort()));
                 backendInfo.add(String.valueOf(backend.getBePort()));
                 backendInfo.add(String.valueOf(backend.getHttpPort()));

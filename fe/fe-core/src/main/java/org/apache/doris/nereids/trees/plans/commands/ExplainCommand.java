@@ -29,22 +29,10 @@ public class ExplainCommand implements Command {
      * explain level.
      */
     public enum ExplainLevel {
-        NONE(false),
-        NORMAL(false),
-        VERBOSE(false),
-        GRAPH(false),
-        PARSED_PLAN(true),
-        ANALYZED_PLAN(true),
-        REWRITTEN_PLAN(true),
-        OPTIMIZED_PLAN(true),
-        ALL_PLAN(true)
+        NORMAL,
+        VERBOSE,
+        GRAPH,
         ;
-
-        public final boolean isPlanLevel;
-
-        ExplainLevel(boolean isPlanLevel) {
-            this.isPlanLevel = isPlanLevel;
-        }
     }
 
     private final ExplainLevel level;

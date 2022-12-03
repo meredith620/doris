@@ -19,19 +19,14 @@ package org.apache.doris.catalog.external;
 
 import org.apache.doris.alter.AlterCancelException;
 import org.apache.doris.catalog.Column;
-import org.apache.doris.catalog.Env;
 import org.apache.doris.catalog.TableIf;
 import org.apache.doris.common.DdlException;
 import org.apache.doris.common.MetaNotFoundException;
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
 import org.apache.doris.datasource.ExternalCatalog;
-import org.apache.doris.datasource.ExternalSchemaCache;
 import org.apache.doris.persist.gson.GsonPostProcessable;
 import org.apache.doris.persist.gson.GsonUtils;
-import org.apache.doris.statistics.AnalysisTaskInfo;
-import org.apache.doris.statistics.AnalysisTaskScheduler;
-import org.apache.doris.statistics.BaseAnalysisTask;
 import org.apache.doris.thrift.TTableDescriptor;
 
 import com.google.gson.annotations.SerializedName;
@@ -61,20 +56,26 @@ public class ExternalTable implements TableIf, Writable, GsonPostProcessable {
     protected String name;
     @SerializedName(value = "type")
     protected TableType type = null;
+    @SerializedName(value = "fullSchema")
+    protected volatile List<Column> fullSchema = null;
+    @SerializedName(value = "initialized")
+    protected boolean initialized = false;
     @SerializedName(value = "timestamp")
     protected long timestamp;
+
+    protected ExternalCatalog catalog;
     @SerializedName(value = "dbName")
     protected String dbName;
-
     protected boolean objectCreated = false;
-    protected ExternalCatalog catalog;
     protected ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
 
     /**
      * No args constructor for persist.
      */
     public ExternalTable() {
+        this.initialized = false;
         this.objectCreated = false;
+        this.fullSchema = null;
     }
 
     /**
@@ -92,7 +93,9 @@ public class ExternalTable implements TableIf, Writable, GsonPostProcessable {
         this.catalog = catalog;
         this.dbName = dbName;
         this.type = type;
+        this.initialized = false;
         this.objectCreated = false;
+        this.fullSchema = null;
     }
 
     public void setCatalog(ExternalCatalog catalog) {
@@ -103,9 +106,16 @@ public class ExternalTable implements TableIf, Writable, GsonPostProcessable {
         return false;
     }
 
-    protected void makeSureInitialized() {
-        throw new NotImplementedException();
+    public void setUnInitialized() {
+        this.initialized = false;
     }
+
+    public void replayInitTable(List<Column> schema) {
+        fullSchema = schema;
+        initialized = true;
+    }
+
+    public void makeSureInitialized() {}
 
     @Override
     public void readLock() {
@@ -216,34 +226,27 @@ public class ExternalTable implements TableIf, Writable, GsonPostProcessable {
 
     @Override
     public List<Column> getFullSchema() {
-        ExternalSchemaCache cache = Env.getCurrentEnv().getExtMetaCacheMgr().getSchemaCache(catalog);
-        return cache.getSchema(dbName, name);
+        throw new NotImplementedException();
     }
 
     @Override
     public List<Column> getBaseSchema() {
-        return getFullSchema();
+        throw new NotImplementedException();
     }
 
     @Override
     public List<Column> getBaseSchema(boolean full) {
-        return getFullSchema();
+        throw new NotImplementedException();
     }
-
 
     @Override
     public void setNewFullSchema(List<Column> newSchema) {
+        this.fullSchema = newSchema;
     }
 
     @Override
     public Column getColumn(String name) {
-        List<Column> schema = getFullSchema();
-        for (Column column : schema) {
-            if (name.equals(column.getName())) {
-                return column;
-            }
-        }
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
@@ -298,11 +301,6 @@ public class ExternalTable implements TableIf, Writable, GsonPostProcessable {
 
     public TTableDescriptor toThrift() {
         return null;
-    }
-
-    @Override
-    public BaseAnalysisTask createAnalysisTask(AnalysisTaskScheduler scheduler, AnalysisTaskInfo info) {
-        throw new NotImplementedException();
     }
 
     @Override

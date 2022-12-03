@@ -21,7 +21,6 @@ import org.apache.doris.analysis.UserIdentity;
 import org.apache.doris.catalog.DatabaseIf;
 import org.apache.doris.catalog.Env;
 import org.apache.doris.cluster.ClusterNamespace;
-import org.apache.doris.common.Config;
 import org.apache.doris.common.UserException;
 import org.apache.doris.common.telemetry.Telemetry;
 import org.apache.doris.common.util.DebugUtil;
@@ -198,7 +197,13 @@ public class ConnectContext {
     }
 
     public ConnectContext() {
-        this(null);
+        state = new QueryState();
+        returnRows = 0;
+        serverCapability = MysqlCapability.DEFAULT_CAPABILITY;
+        isKilled = false;
+        serializer = MysqlSerializer.newInstance();
+        sessionVariable = VariableMgr.newSessionVariable();
+        command = MysqlCommand.COM_SLEEP;
     }
 
     public ConnectContext(SocketChannel channel) {
@@ -214,9 +219,6 @@ public class ConnectContext {
             remoteIP = mysqlChannel.getRemoteIp();
         }
         queryDetail = null;
-        if (Config.use_fuzzy_session_variable) {
-            sessionVariable.initFuzzyModeVariables();
-        }
     }
 
     public boolean isTxnModel() {

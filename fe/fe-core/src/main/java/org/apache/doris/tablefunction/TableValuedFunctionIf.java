@@ -48,8 +48,6 @@ public abstract class TableValuedFunctionIf {
                 return new NumbersTableValuedFunction(params);
             case S3TableValuedFunction.NAME:
                 return new S3TableValuedFunction(params);
-            case HdfsTableValuedFunction.NAME:
-                return new HdfsTableValuedFunction(params);
             default:
                 throw new UserException("Could not find table function " + funcName);
         }

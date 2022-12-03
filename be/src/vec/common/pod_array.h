@@ -177,7 +177,7 @@ protected:
     }
 
     bool is_allocated_from_stack() const {
-        constexpr size_t stack_threshold = TAllocator::get_stack_threshold();
+        constexpr size_t stack_threshold = TAllocator::getStackThreshold();
         return (stack_threshold > 0) && (allocated_bytes() <= stack_threshold);
     }
 

@@ -98,7 +98,7 @@ public class RuntimeFilterTypeHelperTest {
 
     @Test(expected = DdlException.class)
     public void testInvalidDecode() throws DdlException {
-        RuntimeFilterTypeHelper.decode(32L);
+        RuntimeFilterTypeHelper.decode(16L);
         Assert.fail("No exception throws");
     }
 }

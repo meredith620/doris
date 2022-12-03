@@ -37,15 +37,12 @@ import org.apache.doris.nereids.trees.expressions.NamedExpression;
 import org.apache.doris.nereids.trees.expressions.Not;
 import org.apache.doris.nereids.trees.expressions.ScalarSubquery;
 import org.apache.doris.nereids.trees.expressions.Slot;
-import org.apache.doris.nereids.trees.expressions.SlotReference;
 import org.apache.doris.nereids.trees.expressions.SubqueryExpr;
-import org.apache.doris.nereids.trees.expressions.functions.ExpressionTrait;
 import org.apache.doris.nereids.trees.expressions.functions.PropagateNullable;
 import org.apache.doris.nereids.trees.expressions.visitor.DefaultExpressionRewriter;
 import org.apache.doris.nereids.trees.plans.GroupPlan;
 import org.apache.doris.nereids.trees.plans.LeafPlan;
 import org.apache.doris.nereids.trees.plans.Plan;
-import org.apache.doris.nereids.trees.plans.algebra.Aggregate;
 import org.apache.doris.nereids.trees.plans.logical.LogicalAggregate;
 import org.apache.doris.nereids.trees.plans.logical.LogicalFilter;
 import org.apache.doris.nereids.trees.plans.logical.LogicalHaving;
@@ -53,13 +50,11 @@ import org.apache.doris.nereids.trees.plans.logical.LogicalJoin;
 import org.apache.doris.nereids.trees.plans.logical.LogicalOneRowRelation;
 import org.apache.doris.nereids.trees.plans.logical.LogicalPlan;
 import org.apache.doris.nereids.trees.plans.logical.LogicalProject;
-import org.apache.doris.nereids.trees.plans.logical.LogicalRepeat;
 import org.apache.doris.nereids.trees.plans.logical.LogicalSort;
 import org.apache.doris.planner.PlannerContext;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
@@ -99,8 +94,7 @@ public class BindSlotReference implements AnalysisRuleFactory {
                     LogicalProject<GroupPlan> project = ctx.root;
                     List<NamedExpression> boundSlots =
                             bind(project.getProjects(), project.children(), project, ctx.cascadesContext);
-                    List<NamedExpression> newOutput = adjustNullableForProjects(project, boundSlots);
-                    return new LogicalProject<>(flatBoundStar(newOutput), project.child());
+                    return new LogicalProject<>(flatBoundStar(boundSlots), project.child());
                 })
             ),
             RuleType.BINDING_FILTER_SLOT.build(
@@ -129,75 +123,39 @@ public class BindSlotReference implements AnalysisRuleFactory {
                     LogicalAggregate<GroupPlan> agg = ctx.root;
                     List<NamedExpression> output =
                             bind(agg.getOutputExpressions(), agg.children(), agg, ctx.cascadesContext);
-                    Map<String, Expression> aliasNameToExpr = output.stream()
+                    final Map<String, Expression> substitutions = output.stream()
                             .filter(ne -> ne instanceof Alias)
                             .map(Alias.class::cast)
                             .collect(Collectors.toMap(Alias::getName, UnaryNode::child));
                     List<Expression> replacedGroupBy = agg.getGroupByExpressions().stream()
-                            .map(groupBy -> {
-                                if (groupBy instanceof UnboundSlot) {
-                                    UnboundSlot unboundSlot = (UnboundSlot) groupBy;
+                            .map(g -> {
+                                if (g instanceof UnboundSlot) {
+                                    UnboundSlot unboundSlot = (UnboundSlot) g;
                                     if (unboundSlot.getNameParts().size() == 1) {
                                         String name = unboundSlot.getNameParts().get(0);
-                                        if (aliasNameToExpr.containsKey(name)) {
-                                            return aliasNameToExpr.get(name);
+                                        if (substitutions.containsKey(name)) {
+                                            return substitutions.get(name);
                                         }
                                     }
                                 }
-                                return groupBy;
+                                return g;
                             }).collect(Collectors.toList());
 
                     List<Expression> groupBy = bind(replacedGroupBy, agg.children(), agg, ctx.cascadesContext);
-                    List<NamedExpression> newOutput = adjustNullableForAgg(agg, output);
-                    return agg.withGroupByAndOutput(groupBy, newOutput);
-                })
-            ),
-            RuleType.BINDING_REPEAT_SLOT.build(
-                logicalRepeat().when(Plan::canBind).thenApply(ctx -> {
-                    LogicalRepeat<GroupPlan> repeat = ctx.root;
-
-                    List<NamedExpression> output =
-                            bind(repeat.getOutputExpressions(), repeat.children(), repeat, ctx.cascadesContext);
-
-                    Map<String, Expression> aliasNameToExpr = output.stream()
-                            .filter(ne -> ne instanceof Alias)
-                            .map(Alias.class::cast)
-                            .collect(Collectors.toMap(Alias::getName, UnaryNode::child));
-                    List<List<Expression>> replacedGroupingSets = repeat.getGroupingSets().stream()
-                            .map(groupBy ->
-                                groupBy.stream().map(expr -> {
-                                    if (expr instanceof UnboundSlot) {
-                                        UnboundSlot unboundSlot = (UnboundSlot) expr;
-                                        if (unboundSlot.getNameParts().size() == 1) {
-                                            String name = unboundSlot.getNameParts().get(0);
-                                            if (aliasNameToExpr.containsKey(name)) {
-                                                return aliasNameToExpr.get(name);
-                                            }
-                                        }
-                                    }
-                                    return expr;
-                                }).collect(Collectors.toList())
-                            ).collect(Collectors.toList());
-
-                    List<List<Expression>> groupingSets = replacedGroupingSets
-                            .stream()
-                            .map(groupingSet -> bind(groupingSet, repeat.children(), repeat, ctx.cascadesContext))
-                            .collect(ImmutableList.toImmutableList());
-                    List<NamedExpression> newOutput = adjustNullableForRepeat(groupingSets, output);
-                    return repeat.withGroupSetsAndOutput(groupingSets, newOutput);
+                    return agg.withGroupByAndOutput(groupBy, output);
                 })
             ),
             RuleType.BINDING_SORT_SLOT.build(
-                logicalSort(aggregate()).when(Plan::canBind).thenApply(ctx -> {
-                    LogicalSort<Aggregate<GroupPlan>> sort = ctx.root;
-                    Aggregate<GroupPlan> aggregate = sort.child();
+                logicalSort(logicalAggregate()).when(Plan::canBind).thenApply(ctx -> {
+                    LogicalSort<LogicalAggregate<GroupPlan>> sort = ctx.root;
+                    LogicalAggregate<GroupPlan> aggregate = sort.child();
                     return bindSortWithAggregateFunction(sort, aggregate, ctx.cascadesContext);
                 })
             ),
             RuleType.BINDING_SORT_SLOT.build(
-                logicalSort(logicalHaving(aggregate())).when(Plan::canBind).thenApply(ctx -> {
-                    LogicalSort<LogicalHaving<Aggregate<GroupPlan>>> sort = ctx.root;
-                    Aggregate<GroupPlan> aggregate = sort.child().child();
+                logicalSort(logicalHaving(logicalAggregate())).when(Plan::canBind).thenApply(ctx -> {
+                    LogicalSort<LogicalHaving<LogicalAggregate<GroupPlan>>> sort = ctx.root;
+                    LogicalAggregate<GroupPlan> aggregate = sort.child().child();
                     return bindSortWithAggregateFunction(sort, aggregate, ctx.cascadesContext);
                 })
             ),
@@ -218,9 +176,9 @@ public class BindSlotReference implements AnalysisRuleFactory {
                 })
             ),
             RuleType.BINDING_HAVING_SLOT.build(
-                logicalHaving(aggregate()).when(Plan::canBind).thenApply(ctx -> {
-                    LogicalHaving<Aggregate<GroupPlan>> having = ctx.root;
-                    Aggregate<GroupPlan> aggregate = having.child();
+                logicalHaving(logicalAggregate()).when(Plan::canBind).thenApply(ctx -> {
+                    LogicalHaving<LogicalAggregate<GroupPlan>> having = ctx.root;
+                    LogicalAggregate<GroupPlan> aggregate = having.child();
                     // We should deduplicate the slots, otherwise the binding process will fail due to the
                     // ambiguous slots exist.
                     Set<Slot> boundSlots = Stream.concat(Stream.of(aggregate), aggregate.children().stream())
@@ -233,27 +191,27 @@ public class BindSlotReference implements AnalysisRuleFactory {
                 })
             ),
             RuleType.BINDING_ONE_ROW_RELATION_SLOT.build(
-                // we should bind UnboundAlias in the UnboundOneRowRelation
-                unboundOneRowRelation().thenApply(ctx -> {
-                    UnboundOneRowRelation oneRowRelation = ctx.root;
-                    List<NamedExpression> projects = oneRowRelation.getProjects()
-                            .stream()
-                            .map(project -> bind(project, ImmutableList.of(), oneRowRelation, ctx.cascadesContext))
-                            .collect(Collectors.toList());
-                    return new LogicalOneRowRelation(projects);
-                })
+                    // we should bind UnboundAlias in the UnboundOneRowRelation
+                    unboundOneRowRelation().thenApply(ctx -> {
+                        UnboundOneRowRelation oneRowRelation = ctx.root;
+                        List<NamedExpression> projects = oneRowRelation.getProjects()
+                                .stream()
+                                .map(project -> bind(project, ImmutableList.of(), oneRowRelation, ctx.cascadesContext))
+                                .collect(Collectors.toList());
+                        return new LogicalOneRowRelation(projects);
+                    })
             ),
 
             RuleType.BINDING_NON_LEAF_LOGICAL_PLAN.build(
                 logicalPlan()
-                    .when(plan -> plan.canBind() && !(plan instanceof LeafPlan))
-                    .then(LogicalPlan::recomputeLogicalProperties)
+                        .when(plan -> plan.canBind() && !(plan instanceof LeafPlan))
+                        .then(LogicalPlan::recomputeLogicalProperties)
             )
         );
     }
 
     private Plan bindSortWithAggregateFunction(
-            LogicalSort<? extends Plan> sort, Aggregate<? extends Plan> aggregate, CascadesContext ctx) {
+            LogicalSort<? extends Plan> sort, LogicalAggregate<? extends Plan> aggregate, CascadesContext ctx) {
         // We should deduplicate the slots, otherwise the binding process will fail due to the
         // ambiguous slots exist.
         Set<Slot> boundSlots = Stream.concat(Stream.of(aggregate), aggregate.children().stream())
@@ -556,7 +514,7 @@ public class BindSlotReference implements AnalysisRuleFactory {
 
         private AnalyzedResult analyzeSubquery(SubqueryExpr expr) {
             CascadesContext subqueryContext = new Memo(expr.getQueryPlan())
-                    .newCascadesContext((cascadesContext.getStatementContext()), cascadesContext.getCteContext());
+                    .newCascadesContext((cascadesContext.getStatementContext()));
             Scope subqueryScope = genScopeWithSubquery(expr);
             subqueryContext
                     .newAnalyzer(Optional.of(subqueryScope))
@@ -610,73 +568,6 @@ public class BindSlotReference implements AnalysisRuleFactory {
                 return !((LogicalAggregate<? extends Plan>) logicalPlan).getGroupByExpressions().isEmpty();
             }
             return false;
-        }
-    }
-
-    /**
-     * When there is a repeat operator in the query,
-     * it will change the nullable information of the output column, which will be changed uniformly here.
-     *
-     * adjust the project with the children output
-     */
-    private List<NamedExpression> adjustNullableForProjects(
-            LogicalProject<GroupPlan> project, List<NamedExpression> projects) {
-        Set<Slot> childrenOutput = project.children().stream()
-                .map(Plan::getOutput)
-                .flatMap(List::stream)
-                .filter(ExpressionTrait::nullable)
-                .collect(Collectors.toSet());
-        return projects.stream()
-                .map(e -> e.accept(new RewriteNullableToTrue(childrenOutput), null))
-                .map(NamedExpression.class::cast)
-                .collect(ImmutableList.toImmutableList());
-    }
-
-    /**
-     * same as project, adjust the agg with the children output.
-     */
-    private List<NamedExpression> adjustNullableForAgg(
-            LogicalAggregate<GroupPlan> aggregate, List<NamedExpression> output) {
-        Set<Slot> childrenOutput = aggregate.children().stream()
-                .map(Plan::getOutput)
-                .flatMap(List::stream)
-                .filter(ExpressionTrait::nullable)
-                .collect(Collectors.toSet());
-        return output.stream()
-                .map(e -> e.accept(new RewriteNullableToTrue(childrenOutput), null))
-                .map(NamedExpression.class::cast)
-                .collect(ImmutableList.toImmutableList());
-    }
-
-    /**
-     * For the columns whose output exists in grouping sets, they need to be assigned as nullable.
-     */
-    private List<NamedExpression> adjustNullableForRepeat(
-            List<List<Expression>> groupingSets,
-            List<NamedExpression> output) {
-        Set<Slot> groupingSetsSlots = groupingSets.stream()
-                .flatMap(e -> e.stream())
-                .flatMap(e -> e.<Set<SlotReference>>collect(SlotReference.class::isInstance).stream())
-                .collect(Collectors.toSet());
-        return output.stream()
-                .map(e -> e.accept(new RewriteNullableToTrue(groupingSetsSlots), null))
-                .map(NamedExpression.class::cast)
-                .collect(ImmutableList.toImmutableList());
-    }
-
-    private static class RewriteNullableToTrue extends DefaultExpressionRewriter<PlannerContext> {
-        private final Set<Slot> childrenOutput;
-
-        public RewriteNullableToTrue(Set<Slot> childrenOutput) {
-            this.childrenOutput = ImmutableSet.copyOf(childrenOutput);
-        }
-
-        @Override
-        public Expression visitSlotReference(SlotReference slotReference, PlannerContext context) {
-            if (childrenOutput.contains(slotReference)) {
-                return slotReference.withNullable(true);
-            }
-            return slotReference;
         }
     }
 }

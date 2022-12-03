@@ -93,14 +93,6 @@ public class NumbersTableValuedFunction extends DataGenTableValuedFunction {
         }
     }
 
-    public long getTotalNumbers() {
-        return totalNumbers;
-    }
-
-    public int getTabletsNum() {
-        return tabletsNum;
-    }
-
     @Override
     public TDataGenFunctionName getDataGenFunctionName() {
         return TDataGenFunctionName.NUMBERS;

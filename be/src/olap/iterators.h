@@ -33,13 +33,6 @@ class RowBlockV2;
 class Schema;
 class ColumnPredicate;
 
-struct IOContext {
-    ReaderType reader_type;
-};
-namespace vectorized {
-struct IteratorRowRef;
-};
-
 class StorageReadOptions {
 public:
     struct KeyRange {
@@ -89,7 +82,7 @@ public:
     // REQUIRED (null is not allowed)
     OlapReaderStatistics* stats = nullptr;
     bool use_page_cache = false;
-    int block_row_max = 4096 - 32; // see https://github.com/apache/doris/pull/11816
+    int block_row_max = 4096;
 
     TabletSchemaSPtr tablet_schema = nullptr;
     bool record_rowids = false;
@@ -97,8 +90,6 @@ public:
     bool read_orderby_key_reverse = false;
     // columns for orderby keys
     std::vector<uint32_t>* read_orderby_key_columns = nullptr;
-
-    IOContext io_ctx;
 };
 
 // Used to read data in RowBlockV2 one by one
@@ -130,13 +121,6 @@ public:
         return Status::NotSupported("to be implemented");
     }
 
-    virtual Status next_row(vectorized::IteratorRowRef* ref) {
-        return Status::NotSupported("to be implemented");
-    }
-    virtual Status unique_key_next_row(vectorized::IteratorRowRef* ref) {
-        return Status::NotSupported("to be implemented");
-    }
-
     virtual bool support_return_data_by_ref() { return false; }
 
     virtual Status current_block_row_locations(std::vector<RowLocation>* block_row_locations) {
@@ -154,8 +138,6 @@ public:
     virtual uint64_t data_id() const { return 0; }
 
     virtual bool update_profile(RuntimeProfile* profile) { return false; }
-    // return rows merged count by iterator
-    virtual uint64_t merged_rows() const { return 0; }
 };
 
 } // namespace doris

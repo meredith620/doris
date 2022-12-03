@@ -33,8 +33,8 @@ import java.util.Map;
 public class ListPartitionDesc extends PartitionDesc {
 
     public ListPartitionDesc(List<String> partitionColNames,
-                             List<AllPartitionDesc> allPartitionDescs) throws AnalysisException {
-        super(partitionColNames, allPartitionDescs);
+                             List<SinglePartitionDesc> singlePartitionDescs) {
+        super(partitionColNames, singlePartitionDescs);
         type = PartitionType.LIST;
     }
 

@@ -43,27 +43,12 @@ public class PartitionDesc {
     protected PartitionType type;
 
     public PartitionDesc(List<String> partitionColNames,
-                         List<AllPartitionDesc> allPartitionDescs) throws AnalysisException {
+                         List<SinglePartitionDesc> singlePartitionDescs) {
         this.partitionColNames = partitionColNames;
-        boolean isMultiPartition = false;
-        List<SinglePartitionDesc> tmpList = Lists.newArrayList();
-        if (allPartitionDescs != null) {
-            for (AllPartitionDesc allPartitionDesc : allPartitionDescs) {
-                if (allPartitionDesc instanceof SinglePartitionDesc) {
-                    tmpList.add((SinglePartitionDesc) allPartitionDesc);
-                } else if (allPartitionDesc instanceof MultiPartitionDesc) {
-                    isMultiPartition = true;
-                    List<SinglePartitionDesc> singlePartitionDescList
-                            = ((MultiPartitionDesc) allPartitionDesc).getSinglePartitionDescList();
-                    tmpList.addAll(singlePartitionDescList);
-                }
-            }
+        this.singlePartitionDescs = singlePartitionDescs;
+        if (this.singlePartitionDescs == null) {
+            this.singlePartitionDescs = Lists.newArrayList();
         }
-        if (isMultiPartition && partitionColNames.size() != 1) {
-            throw new AnalysisException("multi partition column size except 1 but provided "
-                    + partitionColNames.size() + ".");
-        }
-        this.singlePartitionDescs = tmpList;
     }
 
     public List<SinglePartitionDesc> getSinglePartitionDescs() {

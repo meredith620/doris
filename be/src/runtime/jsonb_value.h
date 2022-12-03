@@ -35,9 +35,8 @@ namespace doris {
 struct JsonBinaryValue {
     static const int MAX_LENGTH = (1 << 30);
 
-    // default nullprt and size 0 for invalid or NULL value
-    const char* ptr = nullptr;
-    size_t len = 0;
+    const char* ptr;
+    size_t len;
     JsonbParser parser;
 
     JsonBinaryValue() : ptr(nullptr), len(0) {}

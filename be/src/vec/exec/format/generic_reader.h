@@ -19,7 +19,6 @@
 
 #include "common/status.h"
 #include "runtime/types.h"
-#include "vec/exprs/vexpr_context.h"
 
 namespace doris::vectorized {
 
@@ -44,24 +43,6 @@ public:
         return Status::NotSupported("get_parser_schema is not implemented for this reader.");
     }
     virtual ~GenericReader() = default;
-
-    /// If the underlying FileReader has filled the partition&missing columns,
-    /// The FileScanner does not need to fill
-    bool fill_all_columns() const { return _fill_all_columns; }
-
-    /// Tell the underlying FileReader the partition&missing columns,
-    /// and the FileReader determine to fill columns or not.
-    /// Should set _fill_all_columns = true, if fill the columns.
-    virtual Status set_fill_columns(
-            const std::unordered_map<std::string, std::tuple<std::string, const SlotDescriptor*>>&
-                    partition_columns,
-            const std::unordered_map<std::string, VExprContext*>& missing_columns) {
-        return Status::OK();
-    }
-
-protected:
-    /// Whether the underlying FileReader has filled the partition&missing columns
-    bool _fill_all_columns = false;
 };
 
 } // namespace doris::vectorized

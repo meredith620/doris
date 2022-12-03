@@ -142,8 +142,7 @@ public class PhysicalLimit<CHILD_TYPE extends Plan> extends PhysicalUnary<CHILD_
     public String toString() {
         return Utils.toSqlString("PhysicalLimit",
                 "limit", limit,
-                "offset", offset,
-                "stats", statsDeriveResult
+                "offset", offset
         );
     }
 }

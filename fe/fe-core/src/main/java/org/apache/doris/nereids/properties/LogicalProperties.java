@@ -24,7 +24,6 @@ import org.apache.doris.nereids.trees.expressions.Slot;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Sets;
 
 import java.util.HashSet;
 import java.util.List;
@@ -37,10 +36,10 @@ import java.util.stream.Collectors;
  */
 public class LogicalProperties {
     protected final Supplier<List<Slot>> outputSupplier;
-    protected final Supplier<List<Id>> outputExprIdsSupplier;
-    protected final Supplier<Set<Slot>> outputSetSupplier;
-    protected final Supplier<Set<ExprId>> outputExprIdSetSupplier;
+    protected final Supplier<HashSet<ExprId>> outputSetSupplier;
     private Integer hashCode = null;
+    private Set<ExprId> outputExprIdSet;
+    private List<Id> outputExprIds;
 
     /**
      * constructor of LogicalProperties.
@@ -52,15 +51,8 @@ public class LogicalProperties {
         this.outputSupplier = Suppliers.memoize(
                 Objects.requireNonNull(outputSupplier, "outputSupplier can not be null")
         );
-        this.outputExprIdsSupplier = Suppliers.memoize(
-                () -> this.outputSupplier.get().stream().map(NamedExpression::getExprId).map(Id.class::cast)
-                        .collect(Collectors.toList())
-        );
         this.outputSetSupplier = Suppliers.memoize(
-                () -> Sets.newHashSet(this.outputSupplier.get())
-        );
-        this.outputExprIdSetSupplier = Suppliers.memoize(
-                () -> this.outputSupplier.get().stream().map(NamedExpression::getExprId)
+                () -> outputSupplier.get().stream().map(NamedExpression::getExprId)
                         .collect(Collectors.toCollection(HashSet::new))
         );
     }
@@ -69,16 +61,19 @@ public class LogicalProperties {
         return outputSupplier.get();
     }
 
-    public Set<Slot> getOutputSet() {
-        return outputSetSupplier.get();
-    }
-
     public Set<ExprId> getOutputExprIdSet() {
-        return outputExprIdSetSupplier.get();
+        if (outputExprIdSet == null) {
+            outputExprIdSet = this.outputSupplier.get().stream()
+                    .map(NamedExpression::getExprId).collect(Collectors.toSet());
+        }
+        return outputExprIdSet;
     }
 
     public List<Id> getOutputExprIds() {
-        return outputExprIdsSupplier.get();
+        if (outputExprIds == null) {
+            outputExprIds = getOutputExprIdSet().stream().map(Id.class::cast).collect(Collectors.toList());
+        }
+        return outputExprIds;
     }
 
     public LogicalProperties withOutput(List<Slot> output) {
@@ -94,13 +89,13 @@ public class LogicalProperties {
             return false;
         }
         LogicalProperties that = (LogicalProperties) o;
-        return Objects.equals(outputExprIdSetSupplier.get(), that.outputExprIdSetSupplier.get());
+        return Objects.equals(outputSetSupplier.get(), that.outputSetSupplier.get());
     }
 
     @Override
     public int hashCode() {
         if (hashCode == null) {
-            hashCode = Objects.hash(outputExprIdSetSupplier.get());
+            hashCode = Objects.hash(outputSetSupplier.get());
         }
         return hashCode;
     }

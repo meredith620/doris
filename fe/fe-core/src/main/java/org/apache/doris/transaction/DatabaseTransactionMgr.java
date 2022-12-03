@@ -417,8 +417,7 @@ public class DatabaseTransactionMgr {
     private void checkCommitStatus(List<Table> tableList, TransactionState transactionState,
                                    List<TabletCommitInfo> tabletCommitInfos, TxnCommitAttachment txnCommitAttachment,
                                    Set<Long> errorReplicaIds, Map<Long, Set<Long>> tableToPartition,
-                                   Set<Long> totalInvolvedBackends) throws UserException {
-
+                                    Set<Long> totalInvolvedBackends) throws UserException {
         Database db = env.getInternalCatalog().getDbOrMetaException(dbId);
 
         // update transaction state extra if exists
@@ -526,7 +525,6 @@ public class DatabaseTransactionMgr {
                         // save the error replica ids for current tablet
                         // this param is used for log
                         Set<Long> errorBackendIdsForTablet = Sets.newHashSet();
-                        String errorReplicaInfo = new String();
                         for (long tabletBackend : tabletBackends) {
                             Replica replica = tabletInvertedIndex.getReplica(tabletId, tabletBackend);
                             if (replica == null) {
@@ -543,28 +541,21 @@ public class DatabaseTransactionMgr {
                                 // for example, a replica is in clone state
                                 if (replica.getLastFailedVersion() < 0) {
                                     ++successReplicaNum;
-                                } else {
-                                    errorReplicaInfo += " replica [" + replica.getId() + "], lastFailedVersion ["
-                                                        + replica.getLastFailedVersion() + "]";
                                 }
                             } else {
                                 errorBackendIdsForTablet.add(tabletBackend);
                                 errorReplicaIds.add(replica.getId());
                                 // not remove rollup task here, because the commit maybe failed
                                 // remove rollup task when commit successfully
-                                errorReplicaInfo += " replica [" + replica.getId() + "] commitBackends null or "
-                                                    + "tabletBackend [" + tabletBackend + "] does not "
-                                                    + "in commitBackends";
                             }
                         }
 
                         if (successReplicaNum < quorumReplicaNum) {
                             LOG.warn("Failed to commit txn [{}]. "
                                             + "Tablet [{}] success replica num is {} < quorum replica num {} "
-                                            + "while error backends {} error replica info {}",
-                                    transactionState.getTransactionId(), tablet.getId(), successReplicaNum,
-                                    quorumReplicaNum, Joiner.on(",").join(errorBackendIdsForTablet),
-                                    errorReplicaInfo);
+                                            + "while error backends {}", transactionState.getTransactionId(),
+                                    tablet.getId(), successReplicaNum, quorumReplicaNum,
+                                    Joiner.on(",").join(errorBackendIdsForTablet));
                             throw new TabletQuorumFailedException(transactionState.getTransactionId(), tablet.getId(),
                                     successReplicaNum, quorumReplicaNum,
                                     errorBackendIdsForTablet);

@@ -37,8 +37,7 @@ class MockRowset : public Rowset {
         return Status::NotSupported("MockRowset not support this method.");
     }
 
-    virtual Status link_files_to(const std::string& dir, RowsetId new_rowset_id,
-                                 size_t start_seg_id) override {
+    virtual Status link_files_to(const std::string& dir, RowsetId new_rowset_id) override {
         return Status::NotSupported("MockRowset not support this method.");
     }
 

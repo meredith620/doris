@@ -15,9 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("add_table_policy_by_alter_table") {
-    sql """ADMIN SET FRONTEND CONFIG ("enable_storage_policy" = "true");"""
+// The cases is copied from https://github.com/trinodb/trino/tree/master
+// /testing/trino-product-tests/src/main/resources/sql-tests/testcases/window_functions
+// and modified by Doris.
 
+suite("add_table_policy_by_alter_table") {
     def create_table_not_have_policy_result = try_sql """
         CREATE TABLE IF NOT EXISTS create_table_not_have_policy
         (

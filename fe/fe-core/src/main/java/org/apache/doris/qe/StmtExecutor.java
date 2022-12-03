@@ -93,6 +93,7 @@ import org.apache.doris.mysql.privilege.PrivPredicate;
 import org.apache.doris.nereids.NereidsPlanner;
 import org.apache.doris.nereids.StatementContext;
 import org.apache.doris.nereids.glue.LogicalPlanAdapter;
+import org.apache.doris.nereids.rules.analysis.CTEContext;
 import org.apache.doris.planner.OlapScanNode;
 import org.apache.doris.planner.OriginalPlanner;
 import org.apache.doris.planner.Planner;
@@ -107,8 +108,6 @@ import org.apache.doris.rewrite.ExprRewriter;
 import org.apache.doris.rewrite.mvrewrite.MVSelectFailedException;
 import org.apache.doris.rpc.RpcException;
 import org.apache.doris.service.FrontendOptions;
-import org.apache.doris.statistics.util.InternalQueryBuffer;
-import org.apache.doris.statistics.util.InternalQueryResult.ResultRow;
 import org.apache.doris.task.LoadEtlTask;
 import org.apache.doris.thrift.TFileFormatType;
 import org.apache.doris.thrift.TFileType;
@@ -213,6 +212,7 @@ public class StmtExecutor implements ProfileWriter {
             this.statementContext.setConnectContext(ctx);
             this.statementContext.setOriginStatement(originStmt);
             this.statementContext.setParsedStatement(parsedStmt);
+            this.statementContext.setCteContext(new CTEContext());
         } else {
             this.statementContext = new StatementContext(ctx, originStmt);
             this.statementContext.setParsedStatement(parsedStmt);
@@ -730,7 +730,7 @@ public class StmtExecutor implements ProfileWriter {
                 } catch (UserException e) {
                     throw e;
                 } catch (Exception e) {
-                    LOG.warn("Analyze failed. {}", context.getQueryIdentifier(), e);
+                    LOG.error("Analyze failed. {}", context.getQueryIdentifier(), e);
                     if (parsedStmt instanceof LogicalPlanAdapter) {
                         throw new NereidsException(new AnalysisException("Unexpected exception: " + e.getMessage(), e));
                     }
@@ -1788,82 +1788,5 @@ public class StmtExecutor implements ProfileWriter {
         this.statementContext.setParsedStatement(parsedStmt);
         return parsedStmt;
     }
-
-    public List<ResultRow> executeInternalQuery() {
-        try {
-            List<ResultRow> resultRows = new ArrayList<>();
-            analyzer = new Analyzer(context.getEnv(), context);
-            try {
-                analyze(context.getSessionVariable().toThrift());
-            } catch (UserException e) {
-                LOG.warn("Internal SQL execution failed, SQL: {}", originStmt, e);
-                return resultRows;
-            }
-            planner.getFragments();
-            RowBatch batch;
-            coord = new Coordinator(context, analyzer, planner);
-            try {
-                QeProcessorImpl.INSTANCE.registerQuery(context.queryId(),
-                        new QeProcessorImpl.QueryInfo(context, originStmt.originStmt, coord));
-            } catch (UserException e) {
-                LOG.warn(e.getMessage(), e);
-            }
-
-            coord.setProfileWriter(this);
-            Span queryScheduleSpan = context.getTracer()
-                    .spanBuilder("internal SQL schedule").setParent(Context.current()).startSpan();
-            try (Scope scope = queryScheduleSpan.makeCurrent()) {
-                coord.exec();
-            } catch (Exception e) {
-                queryScheduleSpan.recordException(e);
-                LOG.warn("Unexpected exception when SQL running", e);
-            } finally {
-                queryScheduleSpan.end();
-            }
-            Span fetchResultSpan = context.getTracer().spanBuilder("fetch internal SQL result")
-                    .setParent(Context.current()).startSpan();
-            try (Scope scope = fetchResultSpan.makeCurrent()) {
-                while (true) {
-                    batch = coord.getNext();
-                    if (batch == null || batch.isEos()) {
-                        return resultRows;
-                    } else {
-                        resultRows.addAll(convertResultBatchToResultRows(batch.getBatch()));
-                    }
-                }
-            } catch (Exception e) {
-                LOG.warn("Unexpected exception when SQL running", e);
-                fetchResultSpan.recordException(e);
-                return resultRows;
-            } finally {
-                fetchResultSpan.end();
-            }
-        } finally {
-            QeProcessorImpl.INSTANCE.unregisterQuery(context.queryId());
-        }
-    }
-
-    private List<ResultRow> convertResultBatchToResultRows(TResultBatch batch) {
-        List<String> columns = parsedStmt.getColLabels();
-        List<PrimitiveType> types = parsedStmt.getResultExprs().stream()
-                .map(e -> e.getType().getPrimitiveType())
-                .collect(Collectors.toList());
-        List<ResultRow> resultRows = new ArrayList<>();
-        List<ByteBuffer> rows = batch.getRows();
-        for (ByteBuffer buffer : rows) {
-            List<String> values = Lists.newArrayList();
-            InternalQueryBuffer queryBuffer = new InternalQueryBuffer(buffer.slice());
-
-            for (int i = 0; i < columns.size(); i++) {
-                String value = queryBuffer.readStringWithLength();
-                values.add(value);
-            }
-
-            ResultRow resultRow = new ResultRow(columns, types, values);
-            resultRows.add(resultRow);
-        }
-        return resultRows;
-    }
-
 }
 

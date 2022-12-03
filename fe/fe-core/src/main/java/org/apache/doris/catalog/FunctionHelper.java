@@ -21,7 +21,6 @@ import org.apache.doris.nereids.trees.expressions.functions.BoundFunction;
 import org.apache.doris.nereids.trees.expressions.functions.FunctionBuilder;
 import org.apache.doris.nereids.trees.expressions.functions.agg.AggregateFunction;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.ScalarFunction;
-import org.apache.doris.nereids.trees.expressions.functions.table.TableValuedFunction;
 
 import com.google.common.collect.ImmutableList;
 
@@ -68,10 +67,6 @@ public interface FunctionHelper {
         return new AggregateFunc(functionClass, functionName);
     }
 
-    default TableValuedFunc tableValued(Class<? extends TableValuedFunction> functionClass, String... functionNames) {
-        return new TableValuedFunc(functionClass, functionNames);
-    }
-
     /**
      * Resolve AggregateFunction class, convert to FunctionBuilder and wrap to AggregateFunc
      * @param functionClass the AggregateFunction class
@@ -108,12 +103,6 @@ public interface FunctionHelper {
 
     class AggregateFunc extends NamedFunc<AggregateFunction> {
         public AggregateFunc(Class<? extends AggregateFunction> functionClass, String... names) {
-            super(functionClass, names);
-        }
-    }
-
-    class TableValuedFunc extends NamedFunc<TableValuedFunction> {
-        public TableValuedFunc(Class<? extends TableValuedFunction> functionClass, String... names) {
             super(functionClass, names);
         }
     }

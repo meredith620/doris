@@ -1,7 +1,7 @@
 ---
 {
     "title": "WINDOW-FUNCTION-WINDOW-FUNNEL",
-    "language": "zh-CN"
+    "language": "en"
 }
 ---
 

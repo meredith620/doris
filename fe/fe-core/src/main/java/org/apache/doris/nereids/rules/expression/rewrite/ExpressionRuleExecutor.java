@@ -17,7 +17,6 @@
 
 package org.apache.doris.nereids.rules.expression.rewrite;
 
-import org.apache.doris.nereids.rules.expression.rewrite.rules.NormalizeBinaryPredicatesRule;
 import org.apache.doris.nereids.trees.expressions.Expression;
 import org.apache.doris.qe.ConnectContext;
 
@@ -66,10 +65,6 @@ public class ExpressionRuleExecutor {
 
     private Expression applyRule(Expression expr, ExpressionRewriteRule rule) {
         return rule.rewrite(expr, ctx);
-    }
-
-    public static Expression normalize(Expression expression) {
-        return NormalizeBinaryPredicatesRule.INSTANCE.rewrite(expression, null);
     }
 
 }

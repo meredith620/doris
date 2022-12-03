@@ -70,10 +70,6 @@ static IAggregateFunction* create_aggregate_function_single_value(const String& 
         return new AggregateFunctionTemplate<Data<SingleValueDataDecimal<Decimal128>>, false>(
                 argument_type);
     }
-    if (which.idx == TypeIndex::Decimal128I) {
-        return new AggregateFunctionTemplate<Data<SingleValueDataDecimal<Decimal128I>>, false>(
-                argument_type);
-    }
     return nullptr;
 }
 

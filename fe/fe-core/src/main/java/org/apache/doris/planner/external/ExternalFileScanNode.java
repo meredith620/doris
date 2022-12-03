@@ -51,7 +51,6 @@ import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.TExpr;
 import org.apache.doris.thrift.TFileScanNode;
 import org.apache.doris.thrift.TFileScanRangeParams;
-import org.apache.doris.thrift.TFileScanSlotInfo;
 import org.apache.doris.thrift.TFileType;
 import org.apache.doris.thrift.TPlanNode;
 import org.apache.doris.thrift.TPlanNodeType;
@@ -122,8 +121,6 @@ public class ExternalFileScanNode extends ExternalScanNode {
     // For explain
     private long inputSplitsNum = 0;
     private long totalFileSize = 0;
-    private long totalPartitionNum = 0;
-    private long readPartitionNum = 0;
 
     /**
      * External file scan node for:
@@ -167,8 +164,6 @@ public class ExternalFileScanNode extends ExternalScanNode {
 
         switch (type) {
             case QUERY:
-                // prepare for partition prune
-                computeColumnFilter();
                 if (this.desc.getTable() instanceof HMSExternalTable) {
                     HMSExternalTable hmsTable = (HMSExternalTable) this.desc.getTable();
                     initHMSExternalTable(hmsTable);
@@ -204,13 +199,13 @@ public class ExternalFileScanNode extends ExternalScanNode {
         FileScanProviderIf scanProvider;
         switch (hmsTable.getDlaType()) {
             case HUDI:
-                scanProvider = new HudiScanProvider(hmsTable, desc, columnNameToRange);
+                scanProvider = new HudiScanProvider(hmsTable, desc);
                 break;
             case ICEBERG:
-                scanProvider = new IcebergScanProvider(hmsTable, desc, columnNameToRange);
+                scanProvider = new IcebergScanProvider(hmsTable, desc);
                 break;
             case HIVE:
-                scanProvider = new HiveScanProvider(hmsTable, desc, columnNameToRange);
+                scanProvider = new HiveScanProvider(hmsTable, desc);
                 break;
             default:
                 throw new UserException("Unknown table type: " + hmsTable.getDlaType());
@@ -305,10 +300,6 @@ public class ExternalFileScanNode extends ExternalScanNode {
             createScanRangeLocations(context, scanProvider);
             this.inputSplitsNum += scanProvider.getInputSplitNum();
             this.totalFileSize += scanProvider.getInputFileSize();
-            if (scanProvider instanceof HiveScanProvider) {
-                this.totalPartitionNum = ((HiveScanProvider) scanProvider).getTotalPartitionNum();
-                this.readPartitionNum = ((HiveScanProvider) scanProvider).getReadPartitionNum();
-            }
         }
     }
 
@@ -319,13 +310,11 @@ public class ExternalFileScanNode extends ExternalScanNode {
         }
         TableIf tbl = scanProvider.getTargetTable();
         List<Integer> columnIdxs = Lists.newArrayList();
-
-        for (TFileScanSlotInfo slot : context.params.getRequiredSlots()) {
-            if (!slot.isIsFileSlot()) {
+        for (SlotDescriptor slot : desc.getSlots()) {
+            if (!slot.isMaterialized()) {
                 continue;
             }
-            SlotDescriptor slotDesc = desc.getSlot(slot.getSlotId());
-            String colName = slotDesc.getColumn().getName();
+            String colName = slot.getColumn().getName();
             int idx = tbl.getBaseColumnIdxByName(colName);
             if (idx == -1) {
                 throw new UserException("Column " + colName + " not found in table " + tbl.getName());
@@ -522,7 +511,9 @@ public class ExternalFileScanNode extends ExternalScanNode {
 
     @Override
     public String getNodeExplainString(String prefix, TExplainLevel detailLevel) {
-        StringBuilder output = new StringBuilder();
+        StringBuilder output = new StringBuilder(prefix);
+        // output.append(fileTable.getExplainString(prefix));
+
         if (!conjuncts.isEmpty()) {
             output.append(prefix).append("predicates: ").append(getExplainString(conjuncts)).append("\n");
         }
@@ -533,8 +524,6 @@ public class ExternalFileScanNode extends ExternalScanNode {
 
         output.append(prefix).append("inputSplitNum=").append(inputSplitsNum).append(", totalFileSize=")
                 .append(totalFileSize).append(", scanRanges=").append(scanRangeLocations.size()).append("\n");
-        output.append(prefix).append("partition=").append(readPartitionNum).append("/").append(totalPartitionNum)
-                .append("\n");
 
         output.append(prefix);
         if (cardinality > 0) {
@@ -548,5 +537,4 @@ public class ExternalFileScanNode extends ExternalScanNode {
         return output.toString();
     }
 }
-
 

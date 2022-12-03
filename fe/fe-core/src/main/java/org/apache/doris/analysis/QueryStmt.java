@@ -432,18 +432,20 @@ public abstract class QueryStmt extends StatementBase implements Queriable {
             if (substituteExpr == null) {
                 if (aliasFirst) {
                     substituteExpr = expr.trySubstitute(aliasSMap, analyzer, false);
+                    i.set(substituteExpr);
                 } else {
                     try {
                         // use col name from tableRefs first
-                        substituteExpr = expr.clone();
-                        substituteExpr.analyze(analyzer);
+                        expr.analyze(analyzer);
                     } catch (AnalysisException ex) {
                         // then consider alias name
                         substituteExpr = expr.trySubstitute(aliasSMap, analyzer, false);
+                        i.set(substituteExpr);
                     }
                 }
+            } else {
+                i.set(substituteExpr);
             }
-            i.set(substituteExpr);
         }
     }
 

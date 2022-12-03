@@ -126,18 +126,18 @@ static bool _eval_in_val(const ColumnMinMaxParams& params) {
     case TYPE_STRING:
     case TYPE_VARCHAR:
     case TYPE_CHAR: {
-        std::vector<std::string> in_values;
+        std::vector<const char*> in_values;
         for (auto val : params.in_pred_values) {
-            in_values.emplace_back(((StringValue*)val)->to_string());
+            std::string value = ((StringValue*)val)->to_string();
+            in_values.emplace_back(value.data());
         }
         if (in_values.empty()) {
             return false;
         }
         auto result = std::minmax_element(in_values.begin(), in_values.end());
-        std::string& in_min = *result.first;
-        std::string& in_max = *result.second;
-        if (strcmp(in_max.data(), params.min_bytes) < 0 ||
-            strcmp(in_min.data(), params.max_bytes) > 0) {
+        const char* in_min = *result.first;
+        const char* in_max = *result.second;
+        if (strcmp(in_max, params.min_bytes) < 0 || strcmp(in_min, params.max_bytes) > 0) {
             return true;
         }
         break;
@@ -397,17 +397,6 @@ struct ScanPredicate {
     bool _null_op = false;
     bool _is_null = false;
     int _scale;
-
-    ScanPredicate(const ScanPredicate& other) {
-        _col_name = other._col_name;
-        _op = other._op;
-        for (void* v : other._values) {
-            _values.push_back(v);
-        }
-        _null_op = other._null_op;
-        _is_null = other._is_null;
-        _scale = other._scale;
-    }
 };
 
 template <PrimitiveType primitive_type>
@@ -451,9 +440,7 @@ static void to_filter(const ColumnValueRange<primitive_type>& col_val_range,
             low._col_name = col_val_range.column_name();
             low._op = (low_op == SQLFilterOp::FILTER_LARGER_OR_EQUAL ? TExprOpcode::GE
                                                                      : TExprOpcode::GT);
-            // NOTICE: use get_range_min_value_ptr, not "low_value"'s addr,
-            // to avoid stack-use-after-return bug
-            low._values.push_back(const_cast<CppType*>(col_val_range.get_range_min_value_ptr()));
+            low._values.push_back(const_cast<CppType*>(&low_value));
             low._scale = col_val_range.scale();
             filters.push_back(low);
         }
@@ -464,9 +451,7 @@ static void to_filter(const ColumnValueRange<primitive_type>& col_val_range,
             high._col_name = col_val_range.column_name();
             high._op = (high_op == SQLFilterOp::FILTER_LESS_OR_EQUAL ? TExprOpcode::LE
                                                                      : TExprOpcode::LT);
-            // NOTICE: use get_range_max_value_ptr, not "high_value"'s addr,
-            // to avoid stack-use-after-return bug
-            high._values.push_back(const_cast<CppType*>(col_val_range.get_range_max_value_ptr()));
+            high._values.push_back(const_cast<CppType*>(&high_value));
             high._scale = col_val_range.scale();
             filters.push_back(high);
         }
@@ -549,6 +534,7 @@ static bool determine_filter_min_max(const ColumnValueRangeType& col_val_range,
     params.parquet_type_length = col_schema->parquet_schema.type_length;
     params.min_bytes = min_bytes;
     params.max_bytes = max_bytes;
+
     for (int i = 0; i < filters.size(); i++) {
         _eval_predicate(filters[i], &params, &need_filter);
         if (need_filter) {

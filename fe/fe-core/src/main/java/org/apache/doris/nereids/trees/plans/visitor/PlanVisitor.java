@@ -19,17 +19,14 @@ package org.apache.doris.nereids.trees.plans.visitor;
 
 import org.apache.doris.nereids.analyzer.UnboundOneRowRelation;
 import org.apache.doris.nereids.analyzer.UnboundRelation;
-import org.apache.doris.nereids.analyzer.UnboundTVFRelation;
 import org.apache.doris.nereids.trees.plans.GroupPlan;
 import org.apache.doris.nereids.trees.plans.Plan;
 import org.apache.doris.nereids.trees.plans.commands.Command;
-import org.apache.doris.nereids.trees.plans.commands.CreatePolicyCommand;
 import org.apache.doris.nereids.trees.plans.commands.ExplainCommand;
 import org.apache.doris.nereids.trees.plans.logical.LogicalAggregate;
 import org.apache.doris.nereids.trees.plans.logical.LogicalApply;
 import org.apache.doris.nereids.trees.plans.logical.LogicalAssertNumRows;
 import org.apache.doris.nereids.trees.plans.logical.LogicalCTE;
-import org.apache.doris.nereids.trees.plans.logical.LogicalCheckPolicy;
 import org.apache.doris.nereids.trees.plans.logical.LogicalEmptyRelation;
 import org.apache.doris.nereids.trees.plans.logical.LogicalFilter;
 import org.apache.doris.nereids.trees.plans.logical.LogicalHaving;
@@ -39,11 +36,9 @@ import org.apache.doris.nereids.trees.plans.logical.LogicalOlapScan;
 import org.apache.doris.nereids.trees.plans.logical.LogicalOneRowRelation;
 import org.apache.doris.nereids.trees.plans.logical.LogicalProject;
 import org.apache.doris.nereids.trees.plans.logical.LogicalRelation;
-import org.apache.doris.nereids.trees.plans.logical.LogicalRepeat;
 import org.apache.doris.nereids.trees.plans.logical.LogicalSelectHint;
 import org.apache.doris.nereids.trees.plans.logical.LogicalSort;
 import org.apache.doris.nereids.trees.plans.logical.LogicalSubQueryAlias;
-import org.apache.doris.nereids.trees.plans.logical.LogicalTVFRelation;
 import org.apache.doris.nereids.trees.plans.logical.LogicalTopN;
 import org.apache.doris.nereids.trees.plans.physical.AbstractPhysicalJoin;
 import org.apache.doris.nereids.trees.plans.physical.AbstractPhysicalSort;
@@ -61,8 +56,6 @@ import org.apache.doris.nereids.trees.plans.physical.PhysicalOneRowRelation;
 import org.apache.doris.nereids.trees.plans.physical.PhysicalProject;
 import org.apache.doris.nereids.trees.plans.physical.PhysicalQuickSort;
 import org.apache.doris.nereids.trees.plans.physical.PhysicalRelation;
-import org.apache.doris.nereids.trees.plans.physical.PhysicalRepeat;
-import org.apache.doris.nereids.trees.plans.physical.PhysicalTVFRelation;
 import org.apache.doris.nereids.trees.plans.physical.PhysicalTopN;
 
 /**
@@ -84,10 +77,6 @@ public abstract class PlanVisitor<R, C> {
     }
 
     public R visitExplainCommand(ExplainCommand explain, C context) {
-        return visitCommand(explain, context);
-    }
-
-    public R visitCreatePolicyCommand(CreatePolicyCommand explain, C context) {
         return visitCommand(explain, context);
     }
 
@@ -119,10 +108,6 @@ public abstract class PlanVisitor<R, C> {
         return visit(relation, context);
     }
 
-    public R visitUnboundTVFRelation(UnboundTVFRelation unboundTVFRelation, C context) {
-        return visit(unboundTVFRelation, context);
-    }
-
     public R visitLogicalRelation(LogicalRelation relation, C context) {
         return visit(relation, context);
     }
@@ -135,24 +120,12 @@ public abstract class PlanVisitor<R, C> {
         return visit(aggregate, context);
     }
 
-    public R visitLogicalRepeat(LogicalRepeat<? extends Plan> repeat, C context) {
-        return visit(repeat, context);
-    }
-
     public R visitLogicalFilter(LogicalFilter<? extends Plan> filter, C context) {
         return visit(filter, context);
     }
 
-    public R visitLogicalCheckPolicy(LogicalCheckPolicy<? extends Plan> checkPolicy, C context) {
-        return visit(checkPolicy, context);
-    }
-
     public R visitLogicalOlapScan(LogicalOlapScan olapScan, C context) {
         return visitLogicalRelation(olapScan, context);
-    }
-
-    public R visitLogicalTVFRelation(LogicalTVFRelation tvfRelation, C context) {
-        return visitLogicalRelation(tvfRelation, context);
     }
 
     public R visitLogicalProject(LogicalProject<? extends Plan> project, C context) {
@@ -199,10 +172,6 @@ public abstract class PlanVisitor<R, C> {
         return visit(agg, context);
     }
 
-    public R visitPhysicalRepeat(PhysicalRepeat<? extends Plan> repeat, C context) {
-        return visit(repeat, context);
-    }
-
     public R visitPhysicalScan(PhysicalRelation scan, C context) {
         return visit(scan, context);
     }
@@ -217,10 +186,6 @@ public abstract class PlanVisitor<R, C> {
 
     public R visitPhysicalOlapScan(PhysicalOlapScan olapScan, C context) {
         return visitPhysicalScan(olapScan, context);
-    }
-
-    public R visitPhysicalTVFRelation(PhysicalTVFRelation tvfRelation, C context) {
-        return visitPhysicalScan(tvfRelation, context);
     }
 
     public R visitAbstractPhysicalSort(AbstractPhysicalSort<? extends Plan> sort, C context) {

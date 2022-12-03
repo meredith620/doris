@@ -187,7 +187,6 @@ fi
 
 "${JAVA}" -DDORIS_HOME="${DORIS_HOME}" \
     -DLOG_PATH="${LOG_OUTPUT_FILE}" \
-    -Dfile.encoding="UTF-8" \
     -Dlogback.configurationFile="${LOG_CONFIG_FILE}" \
     ${JAVA_OPTS:+${JAVA_OPTS}} \
     -jar ${RUN_JAR:+${RUN_JAR}} \

@@ -47,9 +47,7 @@ import org.junit.jupiter.api.Assertions;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Test for es util.
@@ -270,8 +268,7 @@ public class EsUtilTest extends EsTestCase {
         CastExpr castExpr = new CastExpr(Type.INT, floatLiteral);
         BinaryPredicate castPredicate = new BinaryPredicate(Operator.EQ, castExpr, new IntLiteral(3));
         List<Expr> notPushDownList = new ArrayList<>();
-        Map<String, String> fieldsContext = new HashMap<>();
-        Assertions.assertNull(EsUtil.toEsDsl(castPredicate, notPushDownList, fieldsContext));
+        Assertions.assertNull(EsUtil.toEsDsl(castPredicate, notPushDownList));
         Assertions.assertEquals(1, notPushDownList.size());
 
         SlotRef k2 = new SlotRef(null, "k2");
@@ -279,7 +276,7 @@ public class EsUtilTest extends EsTestCase {
         BinaryPredicate eqPredicate = new BinaryPredicate(Operator.EQ, k2, intLiteral);
         CompoundPredicate compoundPredicate = new CompoundPredicate(CompoundPredicate.Operator.OR, castPredicate,
                 eqPredicate);
-        EsUtil.toEsDsl(compoundPredicate, notPushDownList, fieldsContext);
+        EsUtil.toEsDsl(compoundPredicate, notPushDownList);
         Assertions.assertEquals(3, notPushDownList.size());
 
         SlotRef k3 = new SlotRef(null, "k3");
@@ -287,7 +284,7 @@ public class EsUtilTest extends EsTestCase {
         CastExpr castDoubleExpr = new CastExpr(Type.DOUBLE, k3);
         BinaryPredicate castDoublePredicate = new BinaryPredicate(Operator.GE, castDoubleExpr,
                 new FloatLiteral(3.0, Type.DOUBLE));
-        EsUtil.toEsDsl(castDoublePredicate, notPushDownList, fieldsContext);
+        EsUtil.toEsDsl(castDoublePredicate, notPushDownList);
         Assertions.assertEquals(3, notPushDownList.size());
     }
 

@@ -19,15 +19,13 @@
 
 #include <ostream>
 
-#include "runtime/jsonb_value.h"
-#include "vec/columns/column_string.h"
+#include "vec/columns/column_jsonb.h"
 #include "vec/data_types/data_type.h"
-#include "vec/data_types/data_type_string.h"
 
 namespace doris::vectorized {
 class DataTypeJsonb final : public IDataType {
 public:
-    using ColumnType = ColumnString;
+    using ColumnType = ColumnJsonb;
     using FieldType = JsonbField;
     static constexpr bool is_parametric = false;
 
@@ -62,8 +60,5 @@ public:
     std::string to_string(const IColumn& column, size_t row_num) const override;
     void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const override;
     Status from_string(ReadBuffer& rb, IColumn* column) const override;
-
-private:
-    DataTypeString data_type_string;
 };
 } // namespace doris::vectorized

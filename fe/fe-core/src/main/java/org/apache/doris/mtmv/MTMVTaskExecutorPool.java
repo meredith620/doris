@@ -61,14 +61,14 @@ public class MTMVTaskExecutorPool {
                     LOG.warn("failed to execute task.", ex);
                     lastExceptionString = ex.toString();
                 } finally {
-                    task.setFinishTime(MTMVUtils.getNowTimeStamp());
+                    task.setFinishTime(System.currentTimeMillis());
                 }
                 retryTimes--;
             } while (!isSuccess && retryTimes >= 0);
             if (!isSuccess) {
                 task.setState(TaskState.FAILED);
                 task.setErrorCode(-1);
-                task.setMessage(lastExceptionString);
+                task.setErrorMessage(lastExceptionString);
             }
         });
         taskExecutor.setFuture(future);

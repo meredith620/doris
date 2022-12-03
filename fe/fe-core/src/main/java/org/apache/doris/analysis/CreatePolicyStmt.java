@@ -18,7 +18,6 @@
 package org.apache.doris.analysis;
 
 import org.apache.doris.catalog.Env;
-import org.apache.doris.common.Config;
 import org.apache.doris.common.ErrorCode;
 import org.apache.doris.common.ErrorReport;
 import org.apache.doris.common.UserException;
@@ -93,10 +92,6 @@ public class CreatePolicyStmt extends DdlStmt {
         super.analyze(analyzer);
         switch (type) {
             case STORAGE:
-                if (!Config.enable_storage_policy) {
-                    throw new UserException("storage policy feature is disabled by default. "
-                            + "Enable it by setting 'enable_storage_policy=true' in fe.conf");
-                }
                 break;
             case ROW:
             default:

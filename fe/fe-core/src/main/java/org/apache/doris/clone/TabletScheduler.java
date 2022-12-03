@@ -1584,7 +1584,7 @@ public class TabletScheduler extends MasterDaemon {
         }
 
         // 2. release ctx
-        timeoutTablets.forEach(t -> {
+        timeoutTablets.stream().forEach(t -> {
             // Set "resetReplicaState" to true because
             // the timeout task should also be considered as UNRECOVERABLE,
             // so need to reset replica state.
@@ -1610,7 +1610,7 @@ public class TabletScheduler extends MasterDaemon {
 
     private List<List<String>> collectTabletCtx(List<TabletSchedCtx> tabletCtxs) {
         List<List<String>> result = Lists.newArrayList();
-        tabletCtxs.forEach(t -> {
+        tabletCtxs.stream().forEach(t -> {
             result.add(t.getBrief());
         });
         return result;

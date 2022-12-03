@@ -24,7 +24,6 @@ namespace doris::vectorized {
 void register_function_array_size(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionArraySize>();
     factory.register_alias(FunctionArraySize::name, "cardinality");
-    factory.register_alias(FunctionArraySize::name, "array_size");
 }
 
 } // namespace doris::vectorized

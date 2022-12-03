@@ -23,7 +23,6 @@
 #include "olap/rowset/rowset_writer.h"
 #include "olap/schema.h"
 #include "olap/schema_change.h"
-#include "runtime/load_channel_mgr.h"
 #include "runtime/tuple.h"
 #include "util/doris_metrics.h"
 #include "vec/aggregate_functions/aggregate_function_reader.h"
@@ -54,14 +53,8 @@ MemTable::MemTable(TabletSharedPtr tablet, Schema* schema, const TabletSchema* t
           _delete_bitmap(delete_bitmap),
           _rowset_ids(rowset_ids),
           _cur_max_version(cur_max_version) {
-#ifndef BE_TEST
-    _insert_mem_tracker_use_hook = std::make_unique<MemTracker>(
-            fmt::format("MemTableHookInsert:TabletId={}", std::to_string(tablet_id())), nullptr,
-            ExecEnv::GetInstance()->load_channel_mgr()->mem_tracker_set());
-#else
     _insert_mem_tracker_use_hook = std::make_unique<MemTracker>(
             fmt::format("MemTableHookInsert:TabletId={}", std::to_string(tablet_id())));
-#endif
     _buffer_mem_pool = std::make_unique<MemPool>(_insert_mem_tracker.get());
     _table_mem_pool = std::make_unique<MemPool>(_insert_mem_tracker.get());
     if (support_vec) {

@@ -118,7 +118,6 @@ import org.apache.doris.common.Config;
 import org.apache.doris.common.DdlException;
 import org.apache.doris.load.EtlJobType;
 import org.apache.doris.load.sync.SyncJobManager;
-import org.apache.doris.statistics.StatisticsRepository;
 
 /**
  * Use for execute ddl.
@@ -168,7 +167,7 @@ public class DdlExecutor {
         } else if (ddlStmt instanceof AlterTableStatsStmt) {
             env.getStatisticsManager().alterTableStatistics((AlterTableStatsStmt) ddlStmt);
         } else if (ddlStmt instanceof AlterColumnStatsStmt) {
-            StatisticsRepository.alterColumnStatistics((AlterColumnStatsStmt) ddlStmt);
+            env.getStatisticsManager().alterColumnStatistics((AlterColumnStatsStmt) ddlStmt);
         } else if (ddlStmt instanceof AlterViewStmt) {
             env.alterView((AlterViewStmt) ddlStmt);
         } else if (ddlStmt instanceof CancelAlterTableStmt) {
@@ -312,7 +311,7 @@ public class DdlExecutor {
         } else if (ddlStmt instanceof RefreshDbStmt) {
             env.getRefreshManager().handleRefreshDb((RefreshDbStmt) ddlStmt);
         } else if (ddlStmt instanceof AnalyzeStmt) {
-            env.createAnalysisJob((AnalyzeStmt) ddlStmt);
+            env.getStatisticsJobManager().createStatisticsJob((AnalyzeStmt) ddlStmt);
         } else if (ddlStmt instanceof AlterResourceStmt) {
             env.getResourceMgr().alterResource((AlterResourceStmt) ddlStmt);
         } else if (ddlStmt instanceof CreatePolicyStmt) {

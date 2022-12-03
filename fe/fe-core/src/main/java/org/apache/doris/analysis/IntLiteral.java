@@ -310,12 +310,8 @@ public class IntLiteral extends LiteralExpr {
             }
         } else if (targetType.isFloatingPointType()) {
             return new FloatLiteral(new Double(value), targetType);
-        } else if (targetType.isDecimalV2()) {
+        } else if (targetType.isDecimalV2() || targetType.isDecimalV3()) {
             return new DecimalLiteral(new BigDecimal(value));
-        } else if (targetType.isDecimalV3()) {
-            DecimalLiteral res = new DecimalLiteral(new BigDecimal(value));
-            res.setType(targetType);
-            return res;
         }
         return this;
     }

@@ -19,10 +19,10 @@ package org.apache.doris.catalog;
 
 import org.apache.doris.nereids.annotation.Developing;
 import org.apache.doris.nereids.exceptions.AnalysisException;
+import org.apache.doris.nereids.trees.expressions.Expression;
 import org.apache.doris.nereids.trees.expressions.functions.FunctionBuilder;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.Map;
@@ -52,22 +52,16 @@ public class FunctionRegistry {
     @VisibleForTesting
     protected void afterRegisterBuiltinFunctions(Map<String, List<FunctionBuilder>> name2Builders) {}
 
-
-    public FunctionBuilder findFunctionBuilder(String name, Object argument) {
-        return findFunctionBuilder(name, ImmutableList.of(argument));
-    }
-
     // currently we only find function by name and arity
-    public FunctionBuilder findFunctionBuilder(String name, List<? extends Object> arguments) {
+    public FunctionBuilder findFunctionBuilder(String name, List<Expression> arguments) {
         int arity = arguments.size();
         List<FunctionBuilder> functionBuilders = name2Builders.get(name.toLowerCase());
         if (functionBuilders == null || functionBuilders.isEmpty()) {
             throw new AnalysisException("Can not found function '" + name + "'");
         }
 
-        // check the arity and type
         List<FunctionBuilder> candidateBuilders = functionBuilders.stream()
-                .filter(functionBuilder -> functionBuilder.canApply(arguments))
+                .filter(functionBuilder -> functionBuilder.arity == arity)
                 .collect(Collectors.toList());
         if (candidateBuilders.isEmpty()) {
             String candidateHints = getCandidateHint(name, candidateBuilders);
@@ -87,7 +81,6 @@ public class FunctionRegistry {
     private void registerBuiltinFunctions(Map<String, List<FunctionBuilder>> name2Builders) {
         FunctionHelper.addFunctions(name2Builders, BuiltinScalarFunctions.INSTANCE.scalarFunctions);
         FunctionHelper.addFunctions(name2Builders, BuiltinAggregateFunctions.INSTANCE.aggregateFunctions);
-        FunctionHelper.addFunctions(name2Builders, BuiltinTableValuedFunctions.INSTANCE.tableValuedFunctions);
     }
 
     public String getCandidateHint(String name, List<FunctionBuilder> candidateBuilders) {

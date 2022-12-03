@@ -35,7 +35,6 @@ public class InitCatalogLog implements Writable {
     enum Type {
         HMS,
         ES,
-        JDBC,
         UNKNOWN;
     }
 

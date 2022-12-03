@@ -782,10 +782,6 @@ public class DataDescription {
         if (!hasSequenceCol() && !olapTable.hasSequenceCol()) {
             return;
         }
-        // table has sequence map col
-        if (olapTable.hasSequenceCol() && olapTable.getSequenceMapCol() != null) {
-            return;
-        }
         // check olapTable schema and sequenceCol
         if (olapTable.hasSequenceCol() && !hasSequenceCol()) {
             throw new AnalysisException("Table " + olapTable.getName()

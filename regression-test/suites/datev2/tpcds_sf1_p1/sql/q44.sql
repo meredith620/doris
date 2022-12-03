@@ -19,7 +19,7 @@ FROM
            store_sales ss1
          WHERE (ss_store_sk = 4)
          GROUP BY ss_item_sk
-         HAVING (avg(ss_net_profit) > (0.9 * (
+         HAVING (avg(ss_net_profit) > (CAST('0.9' AS DECIMAL) * (
                   SELECT avg(ss_net_profit) rank_col
                   FROM
                     store_sales

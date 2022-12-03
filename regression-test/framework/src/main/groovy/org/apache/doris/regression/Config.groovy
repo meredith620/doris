@@ -123,12 +123,16 @@ class Config {
             def systemProperties = Maps.newLinkedHashMap(System.getProperties())
             configSlurper.setBinding(systemProperties)
             ConfigObject configObj = configSlurper.parse(new File(confFilePath).toURI().toURL())
-            String customConfFilePath = confFile.getParentFile().getPath() + "/regression-conf-custom.groovy"
-            File custFile = new File(customConfFilePath)
-            if (custFile.exists() && custFile.isFile()) {
-                ConfigObject custConfigObj = configSlurper.parse(new File(customConfFilePath).toURI().toURL())
-                configObj.merge(custConfigObj)
-            }
+            config = Config.fromConfigObject(configObj)
+        }
+        String customConfFilePath = confFile.getParentFile().getPath() + "/regression-conf-custom.groovy"
+        File custFile = new File(customConfFilePath)
+        if (custFile.exists() && custFile.isFile()) {
+            log.info("Load custom config file ${customConfFilePath}".toString())
+            def configSlurper = new ConfigSlurper()
+            def systemProperties = Maps.newLinkedHashMap(System.getProperties())
+            configSlurper.setBinding(systemProperties)
+            ConfigObject configObj = configSlurper.parse(new File(customConfFilePath).toURI().toURL())
             config = Config.fromConfigObject(configObj)
         }
         fillDefaultConfig(config)
@@ -270,8 +274,7 @@ class Config {
         }
 
         if (config.jdbcUrl == null) {
-            //jdbcUrl needs parameter here. Refer to function: buildUrl(String dbName)
-            config.jdbcUrl = "jdbc:mysql://127.0.0.1:9030/?useLocalSessionState=true"
+            config.jdbcUrl = "jdbc:mysql://127.0.0.1:9030"
             log.info("Set jdbcUrl to '${config.jdbcUrl}' because not specify.".toString())
         }
 
@@ -433,7 +436,6 @@ class Config {
         }
 
         dir = dir.replace('-', '_')
-        dir = dir.replace('.', '_')
 
         return defaultDb + '_' + dir.replace(File.separator, '_')
     }

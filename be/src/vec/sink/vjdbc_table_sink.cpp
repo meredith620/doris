@@ -17,6 +17,7 @@
 
 #include "vec/sink/vjdbc_table_sink.h"
 
+#ifdef LIBJVM
 #include <gen_cpp/DataSinks_types.h>
 
 #include <sstream>
@@ -66,7 +67,7 @@ Status VJdbcTableSink::open(RuntimeState* state) {
     return Status::OK();
 }
 
-Status VJdbcTableSink::send(RuntimeState* state, Block* block, bool eos) {
+Status VJdbcTableSink::send(RuntimeState* state, Block* block) {
     INIT_AND_SCOPE_SEND_SPAN(state->get_tracer(), _send_span, "VJdbcTableSink::send");
     Status status = Status::OK();
     if (block == nullptr || block->rows() == 0) {
@@ -100,3 +101,4 @@ Status VJdbcTableSink::close(RuntimeState* state, Status exec_status) {
 }
 } // namespace vectorized
 } // namespace doris
+#endif

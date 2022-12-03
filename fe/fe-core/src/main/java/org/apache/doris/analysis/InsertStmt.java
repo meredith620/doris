@@ -681,12 +681,7 @@ public class InsertStmt extends DdlStmt {
             if (exprByName.containsKey(col.getName())) {
                 resultExprs.add(exprByName.get(col.getName()));
             } else {
-                // process sequence col, map sequence column to other column
-                if (targetTable instanceof OlapTable && ((OlapTable) targetTable).hasSequenceCol()
-                        && col.getName().equals(Column.SEQUENCE_COL)
-                        && ((OlapTable) targetTable).getSequenceMapCol() != null) {
-                    resultExprs.add(exprByName.get(((OlapTable) targetTable).getSequenceMapCol()));
-                } else if (col.getDefaultValue() == null) {
+                if (col.getDefaultValue() == null) {
                     /*
                     The import stmt has been filtered in function checkColumnCoverage when
                         the default value of column is null and column is not nullable.

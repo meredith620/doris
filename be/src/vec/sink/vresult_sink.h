@@ -29,15 +29,11 @@ class ExprContext;
 class ResultWriter;
 class MemTracker;
 struct ResultFileOptions;
-namespace pipeline {
-class ResultSinkOperator;
-}
 namespace vectorized {
 class VExprContext;
 
 class VResultSink : public DataSink {
 public:
-    friend class pipeline::ResultSinkOperator;
     VResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& select_exprs,
                 const TResultSink& sink, int buffer_size);
 
@@ -48,7 +44,7 @@ public:
 
     // not implement
     virtual Status send(RuntimeState* state, RowBatch* batch) override;
-    virtual Status send(RuntimeState* state, Block* block, bool eos = false) override;
+    virtual Status send(RuntimeState* state, Block* block) override;
     // Flush all buffered data and close all existing channels to destination
     // hosts. Further send() calls are illegal after calling close().
     virtual Status close(RuntimeState* state, Status exec_status) override;

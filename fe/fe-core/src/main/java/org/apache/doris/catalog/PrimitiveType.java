@@ -49,12 +49,12 @@ public enum PrimitiveType {
     // 8-byte pointer and 4-byte length indicator (12 bytes total).
     // Aligning to 8 bytes so 16 total.
     VARCHAR("VARCHAR", 16, TPrimitiveType.VARCHAR),
-    JSONB("JSONB", 16, TPrimitiveType.JSONB),
+    JSONB("JSON", 16, TPrimitiveType.JSONB),
 
     DECIMALV2("DECIMALV2", 16, TPrimitiveType.DECIMALV2),
     DECIMAL32("DECIMAL32", 4, TPrimitiveType.DECIMAL32),
     DECIMAL64("DECIMAL64", 8, TPrimitiveType.DECIMAL64),
-    DECIMAL128("DECIMAL128", 16, TPrimitiveType.DECIMAL128I),
+    DECIMAL128("DECIMAL128", 16, TPrimitiveType.DECIMAL128),
     TIME("TIME", 8, TPrimitiveType.TIME),
     // these following types are stored as object binary in BE.
     HLL("HLL", 16, TPrimitiveType.HLL),
@@ -116,7 +116,6 @@ public enum PrimitiveType {
         builder.put(NULL_TYPE, CHAR);
         builder.put(NULL_TYPE, VARCHAR);
         builder.put(NULL_TYPE, STRING);
-        builder.put(NULL_TYPE, JSONB);
         builder.put(NULL_TYPE, BITMAP); //TODO(weixiang):why null type can cast to bitmap?
         builder.put(NULL_TYPE, TIME);
         builder.put(NULL_TYPE, TIMEV2);
@@ -970,7 +969,7 @@ public enum PrimitiveType {
                 return DECIMAL32;
             case DECIMAL64:
                 return DECIMAL64;
-            case DECIMAL128I:
+            case DECIMAL128:
                 return DECIMAL128;
             case TIME:
                 return TIME;

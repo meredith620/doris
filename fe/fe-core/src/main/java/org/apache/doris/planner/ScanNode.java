@@ -141,6 +141,7 @@ public abstract class ScanNode extends PlanNode {
                     columnNameToRange.put(column.getName(), columnRange);
                 }
             }
+
         }
     }
 

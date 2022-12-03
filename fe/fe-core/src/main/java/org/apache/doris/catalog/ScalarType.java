@@ -19,9 +19,7 @@ package org.apache.doris.catalog;
 
 import org.apache.doris.common.Config;
 import org.apache.doris.common.io.Text;
-import org.apache.doris.common.util.VectorizedUtil;
 import org.apache.doris.persist.gson.GsonUtils;
-import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TColumnType;
 import org.apache.doris.thrift.TScalarType;
 import org.apache.doris.thrift.TTypeDesc;
@@ -279,7 +277,7 @@ public class ScalarType extends Type {
     }
 
     public static ScalarType createDecimalType() {
-        if (Config.enable_decimal_conversion) {
+        if (Config.enable_decimalv3 && Config.enable_decimal_conversion) {
             return DEFAULT_DECIMALV3;
         } else {
             return DEFAULT_DECIMALV2;
@@ -350,7 +348,7 @@ public class ScalarType extends Type {
     }
 
     public static PrimitiveType getSuitableDecimalType(int precision, boolean decimalV2) {
-        if (decimalV2 && !Config.enable_decimal_conversion) {
+        if ((decimalV2 && !Config.enable_decimal_conversion) || !Config.enable_decimalv3) {
             return PrimitiveType.DECIMALV2;
         }
         if (precision <= MAX_DECIMAL32_PRECISION) {
@@ -531,7 +529,7 @@ public class ScalarType extends Type {
         } else if (type == PrimitiveType.STRING) {
             return "TEXT";
         } else if (type == PrimitiveType.JSONB) {
-            return "JSONB";
+            return "JSON";
         }
         return type.toString();
     }
@@ -603,7 +601,7 @@ public class ScalarType extends Type {
                 stringBuilder.append("text");
                 break;
             case JSONB:
-                stringBuilder.append("jsonb");
+                stringBuilder.append("json");
                 break;
             case ARRAY:
                 stringBuilder.append(type.toString().toLowerCase());
@@ -625,12 +623,6 @@ public class ScalarType extends Type {
 
     @Override
     public void toThrift(TTypeDesc container) {
-        if (type.isDecimalV3Type() || type.isDateV2Type()) {
-            Preconditions.checkArgument((Config.enable_vectorized_load && ConnectContext.get() == null)
-                            || (VectorizedUtil.isVectorized() && ConnectContext.get() != null),
-                    "Please make sure vectorized load and vectorized query engine are enabled to use data type: "
-                            + type);
-        }
         TTypeNode node = new TTypeNode();
         container.types.add(node);
         node.setType(TTypeNodeType.SCALAR);
@@ -651,7 +643,6 @@ public class ScalarType extends Type {
             case DECIMAL64:
             case DECIMAL128:
             case DATETIMEV2: {
-                Preconditions.checkArgument(precision >= scale);
                 scalarType.setScale(scale);
                 scalarType.setPrecision(precision);
                 break;
@@ -1013,16 +1004,6 @@ public class ScalarType extends Type {
 
         if (t1.isDecimalV2() || t2.isDecimalV2()) {
             return MAX_DECIMALV2_TYPE;
-        }
-
-        if ((t1.isDecimalV3() && t2.isFixedPointType()) || (t2.isDecimalV3() && t1.isFixedPointType())) {
-            return t1.isDecimalV3() ? t1 : t2;
-        }
-
-        if (t1.isDecimalV3() && t2.isDecimalV3()) {
-            return ScalarType.createDecimalV3Type(Math.max(t1.decimalPrecision() - t1.decimalScale(),
-                            t2.decimalPrecision() - t2.decimalScale()) + Math.max(t1.decimalScale(),
-                            t2.decimalScale()), Math.max(t1.decimalScale(), t2.decimalScale()));
         }
 
         PrimitiveType smallerType =

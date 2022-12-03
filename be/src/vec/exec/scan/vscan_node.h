@@ -26,24 +26,10 @@
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vin_predicate.h"
 
-namespace doris::pipeline {
-class ScanOperator;
-}
-
 namespace doris::vectorized {
 
 class VScanner;
 class VSlotRef;
-
-struct FilterPredicates {
-    // Save all runtime filter predicates which may be pushed down to data source.
-    // column name -> bloom filter function
-    std::vector<std::pair<std::string, std::shared_ptr<BloomFilterFuncBase>>> bloom_filters;
-
-    std::vector<std::pair<std::string, std::shared_ptr<BitmapFilterFuncBase>>> bitmap_filters;
-
-    std::vector<std::pair<std::string, std::shared_ptr<HybridSetBase>>> in_filters;
-};
 
 class VScanNode : public ExecNode {
 public:
@@ -53,7 +39,6 @@ public:
     friend class NewOlapScanner;
     friend class VFileScanner;
     friend class ScannerContext;
-    friend class doris::pipeline::ScanOperator;
 
     Status init(const TPlanNode& tnode, RuntimeState* state = nullptr) override;
 
@@ -148,8 +133,6 @@ protected:
 
     virtual PushDownType _should_push_down_bloom_filter() { return PushDownType::UNACCEPTABLE; }
 
-    virtual PushDownType _should_push_down_bitmap_filter() { return PushDownType::UNACCEPTABLE; }
-
     virtual PushDownType _should_push_down_is_null_predicate() {
         return PushDownType::UNACCEPTABLE;
     }
@@ -198,7 +181,12 @@ protected:
     // indicate this scan node has no more data to return
     bool _eos = false;
 
-    FilterPredicates _filter_predicates {};
+    // Save all bloom filter predicates which may be pushed down to data source.
+    // column name -> bloom filter function
+    std::vector<std::pair<std::string, std::shared_ptr<BloomFilterFuncBase>>>
+            _bloom_filters_push_down;
+
+    std::vector<std::pair<std::string, std::shared_ptr<HybridSetBase>>> _in_filters_push_down;
 
     // Save all function predicates which may be pushed down to data source.
     std::vector<FunctionFilter> _push_down_functions;
@@ -209,7 +197,7 @@ protected:
             _slot_id_to_value_range;
     // column -> ColumnValueRange
     std::unordered_map<std::string, ColumnValueRangeType> _colname_to_value_range;
-    // We use _colname_to_value_range to store a column and its corresponding value ranges.
+    // We use _colname_to_value_range to store a column and its conresponding value ranges.
     // But if a col is with value range, eg: 1 < col < 10, which is "!is_fixed_range",
     // in this case we can not merge "1 < col < 10" with "col not in (2)".
     // So we have to save "col not in (2)" to another structure: "_not_in_value_ranges".
@@ -262,7 +250,7 @@ private:
     // Register and get all runtime filters at Init phase.
     Status _register_runtime_filter();
     // Get all arrived runtime filters at Open phase.
-    Status _acquire_runtime_filter(bool wait = true);
+    Status _acquire_runtime_filter();
     // Append late-arrival runtime filters to the vconjunct_ctx.
     Status _append_rf_into_conjuncts(std::vector<VExpr*>& vexprs);
 
@@ -272,9 +260,6 @@ private:
 
     Status _normalize_bloom_filter(VExpr* expr, VExprContext* expr_ctx, SlotDescriptor* slot,
                                    PushDownType* pdt);
-
-    Status _normalize_bitmap_filter(VExpr* expr, VExprContext* expr_ctx, SlotDescriptor* slot,
-                                    PushDownType* pdt);
 
     Status _normalize_function_filters(VExpr* expr, VExprContext* expr_ctx, SlotDescriptor* slot,
                                        PushDownType* pdt);

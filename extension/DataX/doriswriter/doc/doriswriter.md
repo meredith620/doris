@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
+
 # DorisWriter 插件文档
 
 ## 1 快速介绍
@@ -184,7 +185,7 @@ DorisWriter 通过Doris原生支持Stream load方式导入数据， DorisWriter�
 ```json
 "loadProps": {
     "column_separator": "\\x01",
-    "line_delimiter": "\\x02"
+    "row_delimiter": "\\x02"
 }
 ```
 

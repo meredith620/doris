@@ -90,7 +90,7 @@ public:
 
     Status close(RuntimeState* state, Status close_status) override;
     using OlapTableSink::send;
-    Status send(RuntimeState* state, vectorized::Block* block, bool eos = false) override;
+    Status send(RuntimeState* state, vectorized::Block* block) override;
 
     size_t get_pending_bytes() const;
 

@@ -22,17 +22,13 @@ import org.apache.doris.common.io.Writable;
 import org.apache.doris.mtmv.MTMVUtils;
 import org.apache.doris.persist.gson.GsonUtils;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.List;
 
-public class MTMVTask implements Writable, Comparable {
+public class MTMVTask implements Writable {
     // also named query id in ConnectContext
     @SerializedName("taskId")
     private String taskId;
@@ -52,20 +48,17 @@ public class MTMVTask implements Writable, Comparable {
     @SerializedName("dbName")
     private String dbName;
 
-    @SerializedName("mvName")
-    private String mvName;
-
     @SerializedName("query")
     private String query;
 
     @SerializedName("user")
     private String user;
 
-    @SerializedName("message")
-    private String message;
-
     @SerializedName("errorCode")
     private int errorCode;
+
+    @SerializedName("errorMessage")
+    private String errorMessage;
 
     @SerializedName("expireTime")
     private long expireTime;
@@ -125,14 +118,6 @@ public class MTMVTask implements Writable, Comparable {
         this.dbName = dbName;
     }
 
-    public String getMvName() {
-        return mvName;
-    }
-
-    public void setMvName(String mvName) {
-        this.mvName = mvName;
-    }
-
     public String getUser() {
         return user;
     }
@@ -142,7 +127,7 @@ public class MTMVTask implements Writable, Comparable {
     }
 
     public String getQuery() {
-        return query == null ? "" : query;
+        return query;
     }
 
     public void setQuery(String query) {
@@ -157,12 +142,12 @@ public class MTMVTask implements Writable, Comparable {
         this.errorCode = errorCode;
     }
 
-    public String getMessage() {
-        return message == null ? "" : message;
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 
     public long getExpireTime() {
@@ -198,47 +183,5 @@ public class MTMVTask implements Writable, Comparable {
     public void write(DataOutput out) throws IOException {
         String json = GsonUtils.GSON.toJson(this);
         Text.writeString(out, json);
-    }
-
-    public static final ImmutableList<String> SHOW_TITLE_NAMES =
-            new ImmutableList.Builder<String>()
-                    .add("TaskId")
-                    .add("JobName")
-                    .add("DBName")
-                    .add("MVName")
-                    .add("Query")
-                    .add("User")
-                    .add("Priority")
-                    .add("RetryTimes")
-                    .add("State")
-                    .add("Message")
-                    .add("ErrorCode")
-                    .add("CreateTime")
-                    .add("ExpireTime")
-                    .add("FinishTime")
-                    .build();
-
-    public List<String> toStringRow() {
-        List<String> list = Lists.newArrayList();
-        list.add(getTaskId());
-        list.add(getJobName());
-        list.add(getDbName());
-        list.add(getMvName());
-        list.add(getQuery().length() > 10240 ? getQuery().substring(0, 10240) : getQuery());
-        list.add(getUser());
-        list.add(Integer.toString(getPriority()));
-        list.add(Integer.toString(getRetryTimes()));
-        list.add(getState().toString());
-        list.add(getMessage().length() > 10240 ? getMessage().substring(0, 10240) : getMessage());
-        list.add(Integer.toString(getErrorCode()));
-        list.add(MTMVUtils.getTimeString(getCreateTime()));
-        list.add(MTMVUtils.getTimeString(getExpireTime()));
-        list.add(MTMVUtils.getTimeString(getFinishTime()));
-        return list;
-    }
-
-    @Override
-    public int compareTo(@NotNull Object o) {
-        return (int) (getCreateTime() - ((MTMVTask) o).getCreateTime());
     }
 }
