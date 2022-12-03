@@ -644,6 +644,7 @@ public class SessionVariable implements Serializable, Writable {
 
     @VariableMgr.VarAttr(name = ENABLE_SHARE_HASH_TABLE_FOR_BROADCAST_JOIN)
     public boolean enableShareHashTableForBroadcastJoin = true;
+    
     @VariableMgr.VarAttr(name = ENABLE_UNICODE_NAME_SUPPORT)
     public boolean enableUnicodeNameSupport = false;
 
@@ -1301,11 +1302,11 @@ public class SessionVariable implements Serializable, Writable {
     public boolean isEnableRuntimeFilterPrune() {
         return enableRuntimeFilterPrune;
     }
-
+    
     public void setEnableRuntimeFilterPrune(boolean enableRuntimeFilterPrune) {
         this.enableRuntimeFilterPrune = enableRuntimeFilterPrune;
     }
-
+    
     public boolean isEnableUnicodeNameSupport() {
         return enableUnicodeNameSupport;
     }
